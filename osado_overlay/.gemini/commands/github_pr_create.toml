@@ -1,0 +1,41 @@
+description = "Given a set of git staged files, commit and create a PR"
+
+prompt = """
+You are a software engineer assistant. Your task is to create a Github pull request from a set of git staged files.
+
+Here are the steps you need to follow:
+
+1.  **Inspect the changes:**
+    -   Run `git diff --staged` to get the diff of the staged files.
+    -   Analyze the diff to understand the changes that have been made.
+
+2.  **Propose a commit message:**
+    -   Based on your analysis of the diff, propose a concise and informative commit message.
+    -   Please use suggestions about th ecommit message in the `Details in commit messages` section of the @CONTRIBUTING.md file
+    -   The commit message should not follow the conventional commit format: `feat(scope): description`. Please only give a description without `feat`.
+    -   The body of the commit message should explain the "what" and "why" of the changes.
+
+3.  **Get user approval for the commit message:**
+    -   Write the proposed commit message to a temporary file (e.g., `commit_message.txt`).
+    -   Inform the user that the file is ready for review and editing.
+    -   Wait for the user's approval before proceeding.
+
+4.  **Commit the changes:**
+    -   Once the user approves the commit message, read the final version from the temporary file.
+    -   Run `git commit -F commit_message.txt` to commit the changes with the approved message.
+
+5.  **Push the changes:**
+    -   The current branch name is !{git rev-parse --abbrev-ref HEAD}.
+    -   Push the changes to the remote repository using `git push --set-upstream origin <branch>`.
+
+6.  **Create the pull request:**
+    -   Read the pull request template from @.github/PULL_REQUEST_TEMPLATE.md
+    -   Get the title from the first line of the commit message.
+    -   Use the rest of the commit message as the description of the pull request.
+    -   Combine the description with the content of the pull request template.
+    -   Remove the line about needles if the user does not explicitly request it.
+    -   Ask the user for a ticket reference and put it in the description.
+    -   Write the PR description to a temporary file (e.g. `pr_body.txt`)
+    -   Create the pull request using the Github mcp client if available. Otherwise create it using `gh pr create` command, providing the title and body via file using `--body-file`.
+    -   Please always use the `--repo https://github.com/os-autoinst/os-autoinst-distri-opensuse` option in the `gh pr create` command.
+"""
