@@ -50,6 +50,12 @@ To update the toolset to the latest version and refresh the links:
 ./tools/install.sh --update /path/to/your/os-autoinst-distri-opensuse
 ```
 
+### 4. Uninstalling
+To remove all symlinks created by this toolset from your OSADO repository:
+```bash
+./tools/install.sh --uninstall /path/to/your/os-autoinst-distri-opensuse
+```
+
 ## Repository Structure
 - `osado_overlay/`: The core Gemini configurations.
     - `.gemini/commands/`: Custom terminal commands (e.g., `/github-pr-create`).
