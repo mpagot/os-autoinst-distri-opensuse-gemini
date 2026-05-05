@@ -1,0 +1,38 @@
+name: Integration Tests
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+    branches: [main, master]
+
+jobs:
+  unit-tests:
+    name: Overlay Installer Tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Run unit tests
+        run: ./t/test_install.sh
+
+  shellcheck:
+    name: ShellCheck Lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install shellcheck
+        run: sudo apt-get install -y shellcheck
+      - name: Lint scripts
+        run: shellcheck tools/*.sh t/*.sh skills/*/scripts/*.sh
+
+  integration-tests:
+    name: Multi-Tool Integration
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Run integration tests
+        run: |
+          podman run --rm \
+            -v "${{ github.workspace }}:/src:ro" \
+            ghcr.io/mpagot/osado-gemini-tester:latest \
+            /src/t/test_integration.sh
