@@ -1,73 +1,182 @@
-# OSADO AI Assistant: Gemini-CLI Skills for Developer Productivity
+# OSADO AI Assistant
 
-This repository provides a specialized AI-assisted environment for developers working on the [os-autoinst-distri-opensuse](https://github.com/os-autoinst/os-autoinst-distri-opensuse) (OSADO) project. It leverages the [Gemini CLI](https://github.com/google/gemini-cli).
-At the moment th efocus is to provide configurations, tools and skills for gemini-cli.
+AI-powered developer productivity skills for the
+[os-autoinst-distri-opensuse](https://github.com/os-autoinst/os-autoinst-distri-opensuse)
+(OSADO) project. Provides modular **Skills** and **Commands** that act as an
+on-demand pair programmer aware of OSADO architecture and workflows.
 
-The OSADO AI Assistant acts as an on-demand pair programmer that "knows" the OSADO architecture.
-It consists of modular **Skills** and **Tools** designed to:
-- **The Committer:** Generate compliant git commit messages and PR descriptions.
-- **The Documenter:** Write and update Perl POD documentation following internal templates.
-- **The Linter/Navigator:** Recommend the correct tools for testing and linting based on context.
-- **The Architect:** Explain complex scheduling and variable scope logic.
-- **The Tester:** Generate unit test scaffolding using existing patterns.
+## Skills Included
 
-## Dependency
-To use these tools, you need:
-- [Gemini CLI](https://github.com/google/gemini-cli) installed and configured.
+| Skill | Description |
+|-------|-------------|
+| `perl-test-compile` | Compile-check Perl files with correct OSADO `PERL5LIB` |
+| `comment-extractor` | Extract and search GitHub PR comments from OSADO |
+| `vr-planner` | Plan verification runs for code changes |
+| `sles4sap-catalog` | Add/audit Perldoc headers on SLES4SAP test modules |
+| `openqa-log-analyzer` | Parse and extract sections from `autoinst-log.txt` |
+
+## Dependencies
+
 - `gh` (GitHub CLI) for PR operations.
 - `jq` for JSON processing.
 - `fzf` (optional, for interactive comment search).
-- `perl` (for compilation checks).
+- `perl` for compilation checks.
 
 ## Installation
-This toolset is designed to be kept in a separate directory from your local OSADO clone. You then "overlay" the configurations using the provided installation script, which creates symlinks.
-This allows you to:
-- Stay updated with the latest toolset changes.
-- Manually edit the provided skills/tools (changes will be reflected in this repo).
-- Keep your personal `.gemini` configurations alongside the shared ones.
 
-### 1. Clone this repository
+### Option A: Gemini CLI Extension (Recommended)
+
+Install as a native Gemini CLI extension. Skills, commands, and context are
+discovered automatically.
+
 ```bash
+# User-level (available across all projects)
+gemini extensions install https://github.com/os-autoinst/os-autoinst-distri-opensuse-gemini
+
+# Workspace-level (only active in your OSADO clone)
+gemini extensions install https://github.com/os-autoinst/os-autoinst-distri-opensuse-gemini --scope workspace
+```
+
+**Workspace-level is recommended** since the context and skills are
+OSADO-specific.
+
+#### Update
+
+```bash
+gemini extensions update osado-ai-assistant
+```
+
+#### Uninstall
+
+```bash
+gemini extensions uninstall osado-ai-assistant
+```
+
+### Option B: Manual Overlay (Legacy)
+
+Symlinks skills and commands into your OSADO clone's `.gemini/` directory.
+This method is deprecated in favor of the native extension install above.
+
+```bash
+# Clone this repository
 git clone https://github.com/os-autoinst/os-autoinst-distri-opensuse-gemini
 cd os-autoinst-distri-opensuse-gemini
-```
 
-### 2. Run the installation script
-Provide the path to your local `os-autoinst-distri-opensuse` clone:
-```bash
+# Install (symlinks into your OSADO clone)
 ./tools/install.sh /path/to/your/os-autoinst-distri-opensuse
-```
 
-The script will:
-- Create `.gemini/commands` and `.gemini/skills` directories in your OSADO repo if they don't exist.
-- Symlink all tools and skills from this repo to your OSADO repo.
-- **Protect your files**: It will never overwrite an existing file. If a conflict is detected, it will warn you and skip that file.
-- Link the OSADO-specific `GEMINI.md` context to your project root.
-
-### 3. Updating
-To update the toolset to the latest version and refresh the links:
-```bash
+# Update (git pull + refresh symlinks)
 ./tools/install.sh --update /path/to/your/os-autoinst-distri-opensuse
-```
 
-### 4. Uninstalling
-To remove all symlinks created by this toolset from your OSADO repository:
-```bash
+# Uninstall (removes only our symlinks, preserves your files)
 ./tools/install.sh --uninstall /path/to/your/os-autoinst-distri-opensuse
 ```
 
+For cross-tool compatibility (also links into `.agents/skills/` and `AGENTS.md`):
+
+```bash
+./tools/install.sh --portable /path/to/your/os-autoinst-distri-opensuse
+```
+
+### Option C: Other AI Coding Tools
+
+The skills in this repository follow the
+[Agent Skills open standard](https://agentskills.io) (`SKILL.md` format) and
+are compatible with 36+ AI coding tools.
+
+#### OpenCode / Pi Agent
+
+These tools discover skills in `.agents/skills/`. Copy or symlink the skills
+directory into your OSADO clone:
+
+```bash
+# From your OSADO clone root:
+mkdir -p .agents/skills
+cp -r /path/to/os-autoinst-distri-opensuse-gemini/skills/* .agents/skills/
+
+# Also place the AGENTS.md context file at your repo root:
+cp /path/to/os-autoinst-distri-opensuse-gemini/osado_overlay/AGENTS.md ./AGENTS.md
+```
+
+Or use the manual installer with `--portable` (creates these symlinks for you).
+
+#### Claude Code
+
+Claude Code discovers skills in `.claude/skills/`:
+
+```bash
+# From your OSADO clone root:
+mkdir -p .claude/skills
+cp -r /path/to/os-autoinst-distri-opensuse-gemini/skills/* .claude/skills/
+```
+
+#### GitHub Copilot
+
+Copilot reads `AGENTS.md` at the repository root for project context but does
+not support the skills/scripts mechanism:
+
+```bash
+cp /path/to/os-autoinst-distri-opensuse-gemini/osado_overlay/AGENTS.md ./AGENTS.md
+```
+
 ## Repository Structure
-- `osado_overlay/`: The core Gemini configurations.
-    - `.gemini/commands/`: Custom terminal commands (e.g., `/github-pr-create`).
-    - `.gemini/skills/`: Specialized expertise packs (Log analysis, SAP catalogs).
-- `docs/`: Documentation and project roadmap.
+
+```
+.
+├── gemini-extension.json    # Extension manifest (for native Gemini install)
+├── OSADO_GEMINI.md          # Context file loaded every Gemini session
+├── osado_overlay/
+│   └── AGENTS.md            # Agent guidelines for the target OSADO repo
+├── skills/                  # Agent skills (SKILL.md + scripts)
+│   ├── perl-test-compile/
+│   ├── comment-extractor/
+│   ├── vr-planner/
+│   ├── sles4sap-catalog/
+│   └── openqa-log-analyzer/
+├── commands/                # Custom commands (Gemini CLI only, TOML)
+│   └── github_pr_create.toml
+├── tools/
+│   └── install.sh           # Legacy manual installer
+├── t/                       # Test suite
+├── docs/                    # Project documentation
+└── ideas/                   # Research and working artifacts
+```
 
 ## Contributing
-We welcome contributions! Please refer to Google `gemini-cli` official documentation:
-- "skills" [https://geminicli.com/docs/cli/skills/](https://geminicli.com/docs/cli/skills/) 
-- "tools" [https://geminicli.com/docs/cli/custom-commands/](https://geminicli.com/docs/cli/custom-commands/)
 
-And refer to the OSADO documentation
+### Development Setup
+
+```bash
+# Clone and link for local development
+git clone https://github.com/os-autoinst/os-autoinst-distri-opensuse-gemini
+cd os-autoinst-distri-opensuse-gemini
+gemini extensions link .
+```
+
+Changes to skills, commands, and context files are picked up on the next
+Gemini CLI session.
+
+### References
+
+- [Agent Skills specification](https://agentskills.io/specification)
+- [Gemini CLI Skills](https://geminicli.com/docs/cli/skills/)
+- [Gemini CLI Custom Commands](https://geminicli.com/docs/cli/custom-commands/)
+- [Gemini CLI Extensions](https://geminicli.com/docs/extensions/)
+
+### Testing
+
+```bash
+# Run overlay installer tests
+./t/test_install.sh
+
+# Run integration tests (requires container runtime)
+podman build -t osado-ai-test -f t/Containerfile .
+podman run --rm osado-ai-test
+
+# Lint bash scripts
+shellcheck tools/*.sh t/*.sh skills/*/scripts/*.sh
+```
 
 ## License
+
 Licensed under the same terms as OSADO (GPL-2.0-or-later).
