@@ -20,14 +20,16 @@
 #    regular file or a symlink to a different location.
 #
 # INTERNAL MECHANISM:
-#   - Recursive Symlinking: The script iterates through the 'osado_overlay' 
-#     directory. For every file found, it creates a corresponding symlink in 
-#     the target OSADO repo.
-#   - Directory Mirroring: It uses 'mkdir -p' to recreate the directory tree. 
-#     It does NOT symlink directories themselves to avoid overwriting your 
+#   - Recursive Symlinking: The script iterates through this repo's
+#     'commands/' and 'skills/' directories at the repo root. For every file
+#     found, it creates a corresponding symlink in <osado>/.gemini/.
+#   - Directory Mirroring: It uses 'mkdir -p' to recreate the directory tree.
+#     It does NOT symlink directories themselves to avoid overwriting your
 #     existing folders (like .gemini/skills).
 #   - Files are processed individually. A conflict in one file does not stop
 #     the rest of the installation.
+#   - 'gemini-extension.json' at the repo root is NOT linked: it is only
+#     meaningful when this repo is installed via 'gemini extensions install'.
 #
 # SUB-COMMANDS:
 #   - [install]: Default behavior. Recursively symlinks files from the overlay
@@ -52,7 +54,6 @@ set -e
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
-OVERLAY_DIR="$REPO_ROOT/osado_overlay"
 
 # Color codes
 RED='\033[0;31m'
@@ -67,6 +68,7 @@ usage() {
     echo "Options:"
     echo "  --update       Update this toolset repository (git pull) before installation"
     echo "  --uninstall    Remove symlinks created by this toolset"
+    echo "  --portable     Also link into .agents/skills/ and AGENTS.md (for OpenCode/Pi Agent)"
     echo "  --help         Show this help message"
     exit 1
 }
@@ -78,12 +80,14 @@ log_error() { echo -e "${RED}ERROR:${NC} $1"; }
 
 UPDATE=false
 UNINSTALL=false
+PORTABLE=false
 OSADO_PATH=""
 
 while [[ "$#" -gt 0 ]]; do
     case $1 in
         --update) UPDATE=true ;;
         --uninstall) UNINSTALL=true ;;
+        --portable) PORTABLE=true ;;
         --help) usage ;;
         -*) log_error "Unknown option: $1"; usage ;;
         *) OSADO_PATH="$1" ;;
@@ -111,6 +115,12 @@ fi
 OSADO_ABS_PATH="$(cd "$OSADO_PATH" && pwd)"
 log_info "Target OSADO repository: $OSADO_ABS_PATH"
 
+# Deprecation notice
+log_warn "This manual installation method is deprecated."
+log_warn "Preferred method: gemini extensions install https://github.com/os-autoinst/os-autoinst-distri-opensuse-gemini"
+log_warn "See README.md for all installation options (Gemini CLI, OpenCode, Claude Code)."
+echo ""
+
 # Create target directories
 TARGET_GEMINI_DIR="$OSADO_ABS_PATH/.gemini"
 mkdir -p "$TARGET_GEMINI_DIR/commands"
@@ -121,7 +131,7 @@ link_files() {
     local src_dir="$1"
     local rel_path="$2" # e.g. "commands" or "skills/openqa-log-analyzer"
     
-    local source_full="$src_dir/.gemini/$rel_path"
+    local source_full="$src_dir/$rel_path"
     local target_full="$TARGET_GEMINI_DIR/$rel_path"
 
     # Create target directory if it doesn't exist
@@ -165,7 +175,7 @@ unlink_files() {
     local src_dir="$1"
     local rel_path="$2"
     
-    local source_full="$src_dir/.gemini/$rel_path"
+    local source_full="$src_dir/$rel_path"
     local target_full="$TARGET_GEMINI_DIR/$rel_path"
 
     [ -d "$source_full" ] || return 0
@@ -193,14 +203,33 @@ unlink_files() {
 
 if [ "$UNINSTALL" = true ]; then
     log_info "Uninstalling overlay files..."
-    unlink_files "$OVERLAY_DIR" "commands"
-    unlink_files "$OVERLAY_DIR" "skills"
+    unlink_files "$REPO_ROOT" "commands"
+    unlink_files "$REPO_ROOT" "skills"
 
-    # Remove root GEMINI.md if it's our link
+    # Remove root GEMINI.md if it points to our OSADO_GEMINI.md
     if [ -L "$OSADO_ABS_PATH/GEMINI.md" ]; then
-        if [ "$(readlink "$OSADO_ABS_PATH/GEMINI.md")" == "$OVERLAY_DIR/GEMINI.md" ]; then
+        if [ "$(readlink "$OSADO_ABS_PATH/GEMINI.md")" == "$REPO_ROOT/OSADO_GEMINI.md" ]; then
             unlink "$OSADO_ABS_PATH/GEMINI.md"
             log_success "Unlinked GEMINI.md from OSADO root."
+        fi
+    fi
+
+    # Portable: remove .agents/skills/ symlinks and AGENTS.md
+    if [ "$PORTABLE" = true ]; then
+        log_info "Removing portable cross-tool files..."
+        TARGET_AGENTS_DIR="$OSADO_ABS_PATH/.agents"
+        if [ -d "$TARGET_AGENTS_DIR/skills" ]; then
+            # Reuse unlink_files with .agents as target
+            local_target_backup="$TARGET_GEMINI_DIR"
+            TARGET_GEMINI_DIR="$TARGET_AGENTS_DIR"
+            unlink_files "$REPO_ROOT" "skills"
+            TARGET_GEMINI_DIR="$local_target_backup"
+        fi
+        if [ -L "$OSADO_ABS_PATH/AGENTS.md" ]; then
+            if [ "$(readlink "$OSADO_ABS_PATH/AGENTS.md")" == "$REPO_ROOT/osado_overlay/AGENTS.md" ]; then
+                unlink "$OSADO_ABS_PATH/AGENTS.md"
+                log_success "Unlinked AGENTS.md from OSADO root."
+            fi
         fi
     fi
 
@@ -209,20 +238,40 @@ if [ "$UNINSTALL" = true ]; then
 fi
 
 log_info "Deploying overlay files..."
-link_files "$OVERLAY_DIR" "commands"
-link_files "$OVERLAY_DIR" "skills"
+link_files "$REPO_ROOT" "commands"
+link_files "$REPO_ROOT" "skills"
 
-# Special case: osado_overlay/GEMINI.md should also be linked to OSADO root if desired,
-# but the user requested files in .gemini folder. 
-# Let's also link GEMINI.md to the root if it doesn't exist.
-if [ -f "$OVERLAY_DIR/GEMINI.md" ]; then
+if [ -f "$REPO_ROOT/OSADO_GEMINI.md" ]; then
     if [ ! -e "$OSADO_ABS_PATH/GEMINI.md" ]; then
-        ln -s "$OVERLAY_DIR/GEMINI.md" "$OSADO_ABS_PATH/GEMINI.md"
-        log_success "Linked GEMINI.md to OSADO root."
+        ln -s "$REPO_ROOT/OSADO_GEMINI.md" "$OSADO_ABS_PATH/GEMINI.md"
+        log_success "Linked OSADO_GEMINI.md to OSADO root as GEMINI.md."
     else
          log_info "GEMINI.md already exists in OSADO root. Skipping."
     fi
 fi
 
+# Portable: also link into .agents/skills/ and AGENTS.md for cross-tool compatibility
+if [ "$PORTABLE" = true ]; then
+    log_info "Deploying portable cross-tool files..."
+
+    # Link skills into .agents/skills/ (for OpenCode, Pi Agent)
+    TARGET_AGENTS_DIR="$OSADO_ABS_PATH/.agents"
+    mkdir -p "$TARGET_AGENTS_DIR/skills"
+    local_target_backup="$TARGET_GEMINI_DIR"
+    TARGET_GEMINI_DIR="$TARGET_AGENTS_DIR"
+    link_files "$REPO_ROOT" "skills"
+    TARGET_GEMINI_DIR="$local_target_backup"
+
+    # Link AGENTS.md to OSADO root (for OpenCode, Pi Agent, Copilot)
+    if [ -f "$REPO_ROOT/osado_overlay/AGENTS.md" ]; then
+        if [ ! -e "$OSADO_ABS_PATH/AGENTS.md" ]; then
+            ln -s "$REPO_ROOT/osado_overlay/AGENTS.md" "$OSADO_ABS_PATH/AGENTS.md"
+            log_success "Linked AGENTS.md to OSADO root (cross-tool compatibility)."
+        else
+            log_info "AGENTS.md already exists in OSADO root. Skipping."
+        fi
+    fi
+fi
+
 log_success "Installation/Update complete!"
-log_info "You can now run 'gemini-cli' from '$OSADO_ABS_PATH'."
+log_info "You can now run 'gemini' from '$OSADO_ABS_PATH'."
