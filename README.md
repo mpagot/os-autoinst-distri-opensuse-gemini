@@ -31,10 +31,10 @@ discovered automatically.
 
 ```bash
 # User-level (available across all projects)
-gemini extensions install https://github.com/os-autoinst/os-autoinst-distri-opensuse-gemini
+gemini extensions install https://github.com/mpagot/os-autoinst-distri-opensuse-gemini
 
 # Workspace-level (only active in your OSADO clone)
-gemini extensions install https://github.com/os-autoinst/os-autoinst-distri-opensuse-gemini --scope workspace
+gemini extensions install https://github.com/mpagot/os-autoinst-distri-opensuse-gemini --scope workspace
 ```
 
 **Workspace-level is recommended** since the context and skills are
@@ -59,7 +59,7 @@ This method is deprecated in favor of the native extension install above.
 
 ```bash
 # Clone this repository
-git clone https://github.com/os-autoinst/os-autoinst-distri-opensuse-gemini
+git clone https://github.com/mpagot/os-autoinst-distri-opensuse-gemini
 cd os-autoinst-distri-opensuse-gemini
 
 # Install (symlinks into your OSADO clone)
@@ -146,7 +146,7 @@ cp /path/to/os-autoinst-distri-opensuse-gemini/OSADO_AGENTS.md ./AGENTS.md
 
 ```bash
 # Clone and link for local development
-git clone https://github.com/os-autoinst/os-autoinst-distri-opensuse-gemini
+git clone https://github.com/mpagot/os-autoinst-distri-opensuse-gemini
 cd os-autoinst-distri-opensuse-gemini
 gemini extensions link .
 ```
