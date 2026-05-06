@@ -3,6 +3,17 @@
 # ==============================================================================
 # OSADO AI Assistant - Installation Test Suite
 # ==============================================================================
+# Tests the overlay install mechanism (tools/install.sh) including:
+#   - Basic installation (symlinks from repo root skills/ and commands/)
+#   - Conflict protection
+#   - Uninstallation (selective, preserves user files)
+#   - Update simulation (mocked git pull)
+#   - Nested directory linking
+#   - Pre-existing .gemini coexistence
+#   - User-modified symlink protection
+#   - Root GEMINI.md and AGENTS.md handling
+#   - --portable flag (cross-tool .agents/skills/)
+# ==============================================================================
 
 set -e
 
@@ -10,7 +21,6 @@ set -e
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 INSTALL_SCRIPT="$REPO_ROOT/tools/install.sh"
-OVERLAY_DIR="$REPO_ROOT/osado_overlay"
 
 # Color codes
 RED='\033[0;31m'
@@ -38,20 +48,26 @@ assert_is_link() {
     local target="$1"
     local expected_source="$2"
     [ -L "$target" ] || log_fail "Path '$target' is not a symlink"
-    local actual_source=$(readlink "$target")
-    # Resolve to absolute path for comparison
-    local abs_expected=$(cd "$(dirname "$expected_source")" && pwd)/$(basename "$expected_source")
-    [ "$actual_source" == "$abs_expected" ] || log_fail "Link '$target' points to '$actual_source', expected '$abs_expected'"
+    local actual_source
+    actual_source=$(readlink "$target")
+    [ "$actual_source" == "$expected_source" ] || log_fail "Link '$target' points to '$actual_source', expected '$expected_source'"
 }
 
 assert_not_exists() {
-    [ ! -e "$1" ] || log_fail "Path '$1' should not exist"
+    if [ -e "$1" ] || [ -L "$1" ]; then
+        log_fail "Path '$1' should not exist"
+    fi
+}
+
+assert_exists() {
+    [ -e "$1" ] || log_fail "Path '$1' should exist"
 }
 
 assert_content() {
     local file="$1"
     local expected="$2"
-    local actual=$(cat "$file")
+    local actual
+    actual=$(cat "$file")
     [ "$actual" == "$expected" ] || log_fail "File '$file' content mismatch. Got: '$actual', Expected: '$expected'"
 }
 
@@ -59,21 +75,31 @@ assert_content() {
 # TEST 1: Basic Installation (Empty OSADO)
 # Verifies basic installation on a clean repository where only .git exists.
 # ------------------------------------------------------------------------------
-log_test "Basic Installation on empty OSADO repo"
+log_test "1: Basic Installation on empty OSADO repo"
 setup_fake_osado
-"$INSTALL_SCRIPT" "$FAKE_OSADO" > /dev/null
+"$INSTALL_SCRIPT" "$FAKE_OSADO" > /dev/null 2>&1
 
-assert_is_link "$FAKE_OSADO/.gemini/commands/github_pr_create.toml" "$OVERLAY_DIR/.gemini/commands/github_pr_create.toml"
-assert_is_link "$FAKE_OSADO/.gemini/skills/test_compile.sh" "$OVERLAY_DIR/.gemini/skills/test_compile.sh"
-assert_is_link "$FAKE_OSADO/GEMINI.md" "$OVERLAY_DIR/GEMINI.md"
+# Commands
+assert_is_link "$FAKE_OSADO/.gemini/commands/github_pr_create.toml" \
+    "$REPO_ROOT/commands/github_pr_create.toml"
+
+# Skills (check a few representative files)
+assert_is_link "$FAKE_OSADO/.gemini/skills/perl-test-compile/SKILL.md" \
+    "$REPO_ROOT/skills/perl-test-compile/SKILL.md"
+assert_is_link "$FAKE_OSADO/.gemini/skills/perl-test-compile/scripts/test_compile.sh" \
+    "$REPO_ROOT/skills/perl-test-compile/scripts/test_compile.sh"
+assert_is_link "$FAKE_OSADO/.gemini/skills/openqa-log-analyzer/SKILL.md" \
+    "$REPO_ROOT/skills/openqa-log-analyzer/SKILL.md"
+
+# Root GEMINI.md
+assert_is_link "$FAKE_OSADO/GEMINI.md" "$REPO_ROOT/OSADO_AGENTS.md"
 log_pass
 
 # ------------------------------------------------------------------------------
 # TEST 2: Conflict Protection (Existing user files)
-# Verifies that the script does not overwrite existing regular files and 
-# issues a warning.
+# Verifies that the script does not overwrite existing regular files.
 # ------------------------------------------------------------------------------
-log_test "Conflict Protection - Do not overwrite user files"
+log_test "2: Conflict Protection - Do not overwrite user files"
 setup_fake_osado
 mkdir -p "$FAKE_OSADO/.gemini/commands"
 echo "USER_CONTENT" > "$FAKE_OSADO/.gemini/commands/github_pr_create.toml"
@@ -89,28 +115,28 @@ grep -q "Conflict" "$TEST_ROOT/install_output.log" || log_fail "No conflict warn
 assert_content "$FAKE_OSADO/.gemini/commands/github_pr_create.toml" "USER_CONTENT"
 
 # Verify other files ARE linked
-assert_is_link "$FAKE_OSADO/.gemini/skills/test_compile.sh" "$OVERLAY_DIR/.gemini/skills/test_compile.sh"
+assert_is_link "$FAKE_OSADO/.gemini/skills/perl-test-compile/SKILL.md" \
+    "$REPO_ROOT/skills/perl-test-compile/SKILL.md"
 log_pass
 
 # ------------------------------------------------------------------------------
 # TEST 3: Uninstallation (Clean & Selective)
-# Verifies that uninstallation only removes links pointing to the toolset,
-# preserving other files in the .gemini directory.
+# Verifies that uninstallation only removes links pointing to the toolset.
 # ------------------------------------------------------------------------------
-log_test "Uninstallation - Remove only toolset links, keep user data"
+log_test "3: Uninstallation - Remove only toolset links, keep user data"
 setup_fake_osado
-"$INSTALL_SCRIPT" "$FAKE_OSADO" > /dev/null
+"$INSTALL_SCRIPT" "$FAKE_OSADO" > /dev/null 2>&1
 
 # Create a user-owned file
-mkdir -p "$FAKE_OSADO/.gemini/skills"
 echo "MY_SKILL" > "$FAKE_OSADO/.gemini/skills/my_skill.md"
 
 # Uninstall
-"$INSTALL_SCRIPT" --uninstall "$FAKE_OSADO" > /dev/null
+"$INSTALL_SCRIPT" --uninstall "$FAKE_OSADO" > /dev/null 2>&1
 
 # Verify toolset links are gone
 assert_not_exists "$FAKE_OSADO/.gemini/commands/github_pr_create.toml"
-assert_not_exists "$FAKE_OSADO/.gemini/skills/test_compile.sh"
+assert_not_exists "$FAKE_OSADO/.gemini/skills/perl-test-compile/SKILL.md"
+assert_not_exists "$FAKE_OSADO/.gemini/skills/openqa-log-analyzer/SKILL.md"
 
 # Verify user file is preserved
 [ -f "$FAKE_OSADO/.gemini/skills/my_skill.md" ] || log_fail "User file was deleted during uninstall!"
@@ -118,9 +144,9 @@ log_pass
 
 # ------------------------------------------------------------------------------
 # TEST 4: Update Simulation (Mocked Git)
-# Verifies that the --update flag triggers a 'git pull' in the toolset repo.
+# Verifies that --update triggers 'git pull' in the toolset repo.
 # ------------------------------------------------------------------------------
-log_test "Update Simulation - verify mocked git pull"
+log_test "4: Update Simulation - verify mocked git pull"
 setup_fake_osado
 
 MOCK_BIN="$TEST_ROOT/bin"
@@ -135,89 +161,140 @@ fi
 EOF
 
 chmod +x "$MOCK_BIN/git"
-export PATH="$MOCK_BIN:$PATH"
-"$INSTALL_SCRIPT" --update "$FAKE_OSADO" > "$TEST_ROOT/update_output.log" 2>&1
+PATH="$MOCK_BIN:$PATH" "$INSTALL_SCRIPT" --update "$FAKE_OSADO" > "$TEST_ROOT/update_output.log" 2>&1
 grep -q "MOCK_GIT_PULL_CALLED" "$TEST_ROOT/update_output.log" || log_fail "Git pull was not called"
 log_pass
 
 # ------------------------------------------------------------------------------
 # TEST 5: Nested Directory Structure
-# Verifies that the script correctly handles and links files within nested 
-# directory structures in the overlay.
+# Verifies recursive linking for skills with scripts/ and assets/.
 # ------------------------------------------------------------------------------
-log_test "Recursive Linking - verify nested directories"
+log_test "5: Recursive Linking - verify nested directories"
 setup_fake_osado
-"$INSTALL_SCRIPT" "$FAKE_OSADO" > /dev/null
+"$INSTALL_SCRIPT" "$FAKE_OSADO" > /dev/null 2>&1
 
-assert_is_link "$FAKE_OSADO/.gemini/skills/openqa-log-analyzer/SKILL.md" "$OVERLAY_DIR/.gemini/skills/openqa-log-analyzer/SKILL.md"
-assert_is_link "$FAKE_OSADO/.gemini/skills/openqa-log-analyzer/scripts/extract_log_section.sh" "$OVERLAY_DIR/.gemini/skills/openqa-log-analyzer/scripts/extract_log_section.sh"
+# openqa-log-analyzer has scripts/
+assert_is_link "$FAKE_OSADO/.gemini/skills/openqa-log-analyzer/scripts/extract_log_section.sh" \
+    "$REPO_ROOT/skills/openqa-log-analyzer/scripts/extract_log_section.sh"
+
+# sles4sap-catalog has scripts/ and assets/
+assert_is_link "$FAKE_OSADO/.gemini/skills/sles4sap-catalog/scripts/audit.sh" \
+    "$REPO_ROOT/skills/sles4sap-catalog/scripts/audit.sh"
+assert_is_link "$FAKE_OSADO/.gemini/skills/sles4sap-catalog/assets/template.md" \
+    "$REPO_ROOT/skills/sles4sap-catalog/assets/template.md"
+
+# vr-planner has multiple scripts
+assert_is_link "$FAKE_OSADO/.gemini/skills/vr-planner/scripts/classify_changes.pl" \
+    "$REPO_ROOT/skills/vr-planner/scripts/classify_changes.pl"
 log_pass
 
 # ------------------------------------------------------------------------------
 # TEST 6: Existing .gemini (Non-conflicting)
-# Verifies installation on a repo that already has a .gemini folder with
-# existing user skills.
+# Verifies installation alongside existing user skills.
 # ------------------------------------------------------------------------------
-log_test "Installation with pre-existing .gemini (non-conflicting)"
+log_test "6: Installation with pre-existing .gemini (non-conflicting)"
 setup_fake_osado
 mkdir -p "$FAKE_OSADO/.gemini/skills"
 echo "PRE_EXISTING" > "$FAKE_OSADO/.gemini/skills/user_skill.md"
 
-"$INSTALL_SCRIPT" "$FAKE_OSADO" > /dev/null
+"$INSTALL_SCRIPT" "$FAKE_OSADO" > /dev/null 2>&1
 
 assert_content "$FAKE_OSADO/.gemini/skills/user_skill.md" "PRE_EXISTING"
-assert_is_link "$FAKE_OSADO/.gemini/skills/test_compile.sh" "$OVERLAY_DIR/.gemini/skills/test_compile.sh"
+assert_is_link "$FAKE_OSADO/.gemini/skills/perl-test-compile/SKILL.md" \
+    "$REPO_ROOT/skills/perl-test-compile/SKILL.md"
 log_pass
 
 # ------------------------------------------------------------------------------
-# TEST 7: Edited before Uninstall (Symlink replacement)
-# Verifies that if a user replaces a toolset symlink with their own file or
-# a different link, it is NOT removed during uninstallation.
+# TEST 7: Edited before Uninstall
+# Verifies that user-replaced symlinks are NOT removed during uninstall.
 # ------------------------------------------------------------------------------
-log_test "Uninstallation - Protect user-modified files that replaced symlinks"
+log_test "7: Uninstallation - Protect user-modified files that replaced symlinks"
 setup_fake_osado
-"$INSTALL_SCRIPT" "$FAKE_OSADO" > /dev/null
+"$INSTALL_SCRIPT" "$FAKE_OSADO" > /dev/null 2>&1
 
 # Replace a symlink with a regular file
-rm "$FAKE_OSADO/.gemini/skills/test_compile.sh"
-echo "USER_MODIFIED" > "$FAKE_OSADO/.gemini/skills/test_compile.sh"
+rm "$FAKE_OSADO/.gemini/skills/perl-test-compile/SKILL.md"
+echo "USER_MODIFIED" > "$FAKE_OSADO/.gemini/skills/perl-test-compile/SKILL.md"
 
 # Replace a symlink with a different link
 rm "$FAKE_OSADO/.gemini/commands/github_pr_create.toml"
 ln -s "/tmp" "$FAKE_OSADO/.gemini/commands/github_pr_create.toml"
 
 # Run uninstall
-"$INSTALL_SCRIPT" --uninstall "$FAKE_OSADO" > /dev/null
-
-# Verify toolset links are gone (using one that wasn't touched)
-assert_not_exists "$FAKE_OSADO/.gemini/skills/search_comments.sh"
+"$INSTALL_SCRIPT" --uninstall "$FAKE_OSADO" > /dev/null 2>&1
 
 # Verify modified files are preserved
-assert_content "$FAKE_OSADO/.gemini/skills/test_compile.sh" "USER_MODIFIED"
+assert_content "$FAKE_OSADO/.gemini/skills/perl-test-compile/SKILL.md" "USER_MODIFIED"
 [ -L "$FAKE_OSADO/.gemini/commands/github_pr_create.toml" ] || log_fail "User symlink was deleted!"
 [ "$(readlink "$FAKE_OSADO/.gemini/commands/github_pr_create.toml")" == "/tmp" ] || log_fail "User symlink points to wrong place"
+
+# Verify other toolset links ARE removed
+assert_not_exists "$FAKE_OSADO/.gemini/skills/openqa-log-analyzer/SKILL.md"
 log_pass
 
 # ------------------------------------------------------------------------------
-# TEST 8: root GEMINI.md handling
-# Verifies that the repository root GEMINI.md is correctly linked and
-# protected from deletion during uninstallation if modified by the user.
+# TEST 8: Root GEMINI.md handling
+# Verifies linking and protection during uninstall.
 # ------------------------------------------------------------------------------
-log_test "Root GEMINI.md - verify linking and protection"
+log_test "8: Root GEMINI.md - verify linking and protection"
 setup_fake_osado
-"$INSTALL_SCRIPT" "$FAKE_OSADO" > /dev/null
+"$INSTALL_SCRIPT" "$FAKE_OSADO" > /dev/null 2>&1
 
-assert_is_link "$FAKE_OSADO/GEMINI.md" "$OVERLAY_DIR/GEMINI.md"
+assert_is_link "$FAKE_OSADO/GEMINI.md" "$REPO_ROOT/OSADO_AGENTS.md"
 
 # Replace with a real file
 rm "$FAKE_OSADO/GEMINI.md"
 echo "USER_GEMINI" > "$FAKE_OSADO/GEMINI.md"
 
-# Run uninstall
-"$INSTALL_SCRIPT" --uninstall "$FAKE_OSADO" > /dev/null
+# Run uninstall — should NOT remove user's regular file
+"$INSTALL_SCRIPT" --uninstall "$FAKE_OSADO" > /dev/null 2>&1
 
-# Verify it is preserved
 assert_content "$FAKE_OSADO/GEMINI.md" "USER_GEMINI"
 log_pass
 
+# ------------------------------------------------------------------------------
+# TEST 9: --portable flag (Cross-tool .agents/skills/ and AGENTS.md)
+# Verifies that --portable creates additional symlinks for OpenCode/Pi Agent.
+# ------------------------------------------------------------------------------
+log_test "9: --portable flag - cross-tool .agents/skills/ and AGENTS.md"
+setup_fake_osado
+"$INSTALL_SCRIPT" --portable "$FAKE_OSADO" > /dev/null 2>&1
+
+# .agents/skills/ should have the same skills
+assert_is_link "$FAKE_OSADO/.agents/skills/perl-test-compile/SKILL.md" \
+    "$REPO_ROOT/skills/perl-test-compile/SKILL.md"
+assert_is_link "$FAKE_OSADO/.agents/skills/openqa-log-analyzer/SKILL.md" \
+    "$REPO_ROOT/skills/openqa-log-analyzer/SKILL.md"
+assert_is_link "$FAKE_OSADO/.agents/skills/openqa-log-analyzer/scripts/extract_log_section.sh" \
+    "$REPO_ROOT/skills/openqa-log-analyzer/scripts/extract_log_section.sh"
+
+# AGENTS.md at root
+assert_is_link "$FAKE_OSADO/AGENTS.md" "$REPO_ROOT/OSADO_AGENTS.md"
+
+# .gemini/ should ALSO be linked (--portable adds to the default, not replaces it)
+assert_is_link "$FAKE_OSADO/.gemini/skills/perl-test-compile/SKILL.md" \
+    "$REPO_ROOT/skills/perl-test-compile/SKILL.md"
+log_pass
+
+# ------------------------------------------------------------------------------
+# TEST 10: --portable --uninstall (removes cross-tool files)
+# Verifies that --portable --uninstall removes .agents/ symlinks and AGENTS.md.
+# ------------------------------------------------------------------------------
+log_test "10: --portable --uninstall - removes cross-tool files"
+
+# AGENTS.md and .agents/ should exist from test 9
+assert_exists "$FAKE_OSADO/AGENTS.md"
+assert_exists "$FAKE_OSADO/.agents/skills/perl-test-compile/SKILL.md"
+
+"$INSTALL_SCRIPT" --portable --uninstall "$FAKE_OSADO" > /dev/null 2>&1
+
+# Cross-tool files should be removed
+assert_not_exists "$FAKE_OSADO/.agents/skills/perl-test-compile/SKILL.md"
+assert_not_exists "$FAKE_OSADO/AGENTS.md"
+
+# .gemini files should also be removed
+assert_not_exists "$FAKE_OSADO/.gemini/skills/perl-test-compile/SKILL.md"
+log_pass
+
+# ==============================================================================
 echo -e "\n${GREEN}All tests passed successfully!${NC}"

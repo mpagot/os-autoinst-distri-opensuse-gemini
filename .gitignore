@@ -1,0 +1,13 @@
+# Test artifacts
+fake_osado/
+
+# Node.js (if extension has build dependencies in future)
+node_modules/
+dist/
+
+# Editor files
+*.swp
+*.swo
+*~
+.vscode/
+.idea/
