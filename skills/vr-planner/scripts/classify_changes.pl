@@ -126,6 +126,26 @@ if ($run_helpers) {
 exit 0;
 
 
+=head2 get_git_files
+
+Retrieve changed file paths from git based on the requested input mode.
+
+Falls back to C<git diff HEAD> when staged mode produces no results,
+so the script still works for developers who forgot to stage.
+
+  @files = get_git_files($mode, $commit_hash);
+
+Arguments:
+
+  $mode        - One of 'staged', 'diff', or 'commit'
+  $commit_hash - Git commit SHA (required when $mode is 'commit', ignored otherwise)
+
+Returns: List of repo-relative file paths (Added/Copied/Modified/Renamed only).
+
+Dies on git command failure.
+
+=cut
+
 sub get_git_files {
     my ($mode, $commit_hash) = @_;
     my $cmd;
@@ -140,6 +160,7 @@ sub get_git_files {
 
     log_verbose("Running: $cmd");
     my @files = `$cmd`;
+    # $? holds the 16-bit wait status; >> 8 extracts the exit code (bits 8-15)
     my $rc = $? >> 8;
     chomp @files;
 
@@ -157,6 +178,25 @@ sub get_git_files {
 
     return @files;
 }
+
+=head2 get_git_branch
+
+Resolve the current branch name for use in CASEDIR construction.
+
+When a commit hash is provided, reverse-maps it to a branch name via
+C<git branch --contains>. Falls back to the abbreviated commit hash
+if no branch contains it.
+
+  $branch = get_git_branch($repo_dir, $commit_hash);
+
+Arguments:
+
+  $repo_dir    - Absolute path to the OSADO repository
+  $commit_hash - Optional git commit SHA to resolve
+
+Returns: Branch name string (e.g. 'my-feature'), abbreviated SHA, or 'HEAD'.
+
+=cut
 
 sub get_git_branch {
     my ($repo_dir, $commit_hash) = @_;
@@ -179,6 +219,25 @@ sub get_git_branch {
     chomp $branch;
     return $branch || 'HEAD';
 }
+
+=head2 get_git_fork_url
+
+Resolve the developer's GitHub fork URL from git remotes.
+
+Normalizes SSH and HTTPS remote URLs to a canonical
+C<https://github.com/USER/REPO> form for CASEDIR construction.
+Tries the 'origin' remote first, then falls back to the first
+available remote.
+
+  $url = get_git_fork_url($repo_dir);
+
+Arguments:
+
+  $repo_dir - Absolute path to the OSADO repository
+
+Returns: HTTPS URL string, or undef if no remote is configured.
+
+=cut
 
 sub get_git_fork_url {
     my ($repo_dir) = @_;
@@ -206,17 +265,53 @@ sub get_git_fork_url {
     return undef;
 }
 
+=head2 find_script
+
+Locate a helper script by filename in the same directory as this script.
+
+  $path = find_script($name);
+
+Arguments:
+
+  $name - Basename of the script to find (e.g. 'find_unit_test.pl')
+
+Returns: Absolute path to the script, or undef if not found.
+
+=cut
+
 sub find_script {
     my ($name) = @_;
-    # Look for sibling scripts in the same directory as this script
     my $dir = dirname(abs_path($0));
     my $path = "$dir/$name";
     return $path if -f $path;
-    # Also check repo ideas/ dir
-    $path = "$repo_dir/ideas/$name";
-    return $path if -f $path;
     return undef;
 }
+
+=head2 run_helpers
+
+Orchestrate detailed analysis by dispatching to specialized helper scripts
+for each non-empty file category.
+
+Mapping:
+
+  tests/    -> find_test_schedule.pl
+  lib/      -> find_unit_test.pl + find_affected_tests.pl
+               (+ find_test_schedule.pl for function-confirmed targets when --git-commit)
+  data/     -> find_data_consumers.pl
+  schedule/ -> prints ready-to-run find_openqa_job.pl commands (does NOT execute;
+               network access requires user confirmation)
+
+Output is printed directly to stdout.
+
+  run_helpers(\%categories);
+
+Arguments:
+
+  $categories - Hashref of category name => {files => [...], vr_needed => 0|1, label => "..."}
+
+Returns: Nothing (side effects: prints to stdout, may invoke subprocesses).
+
+=cut
 
 sub run_helpers {
     my ($categories) = @_;
@@ -332,6 +427,27 @@ sub run_helpers {
     }
 }
 
+=head2 build_report_data
+
+Assemble the classification results into a single report hashref for rendering.
+
+Computes the aggregate count of files needing a verification run and bundles
+the git metadata alongside the categorized file lists.
+
+  $report = build_report_data(\%categories, \@changed_files, $repo_dir, $branch, $fork_url);
+
+Arguments:
+
+  $categories    - Hashref of classified file categories
+  $changed_files - Arrayref of all changed file paths
+  $repo_dir      - Absolute path to the OSADO repository
+  $branch        - Resolved branch name
+  $fork_url      - Resolved GitHub fork URL (may be undef)
+
+Returns: Hashref with keys: total_files, total_vr_needed, categories, repo_dir, branch, fork_url.
+
+=cut
+
 # --- Data preparation ---
 
 sub build_report_data {
@@ -350,6 +466,24 @@ sub build_report_data {
         fork_url        => $fork_url,
     };
 }
+
+=head2 print_text
+
+Render the classification report as human-readable terminal output.
+
+Prints per-category file listings with VR indicators, actionable guidance
+for each category, and a summary section with copy-paste-ready commands
+(prove for unit tests, openqa-clone-job for VR).
+
+  print_text($report);
+
+Arguments:
+
+  $report - Hashref as returned by build_report_data()
+
+Returns: Nothing (prints to stdout).
+
+=cut
 
 # --- Output functions ---
 
@@ -415,7 +549,6 @@ sub print_text {
         print "   # First, find a passing production job to clone. Example:\n";
         print "   # openqa-cli api --host HOST jobs groupid=GROUP_ID test=TEST_NAME \\\n";
         print "   #   state=done result=passed latest=1\n";
-        print "   # See ideas/OPENQA_TECH.md for how to find TEST_NAME and GROUP_ID.\n";
         print "   #\n";
         print "   # Then clone it:\n";
         print "   openqa-clone-job --skip-chained-deps --within-instance \\\n";
@@ -430,6 +563,25 @@ sub print_text {
         print "Tip: Re-run with --helpers for detailed analysis using helper scripts.\n";
     }
 }
+
+=head2 get_guidance
+
+Generate category-specific "next action" lines for display or JSON output.
+
+Maps each category to the recommended verification command(s) the developer
+should run next.
+
+  $lines = get_guidance($cat_name, $files, $repo_dir);
+
+Arguments:
+
+  $cat_name - Category key: 'tests', 'lib', 't', 'data', 'schedule', or 'no_vr'
+  $files    - Arrayref of file paths in this category
+  $repo_dir - Absolute path to the OSADO repository
+
+Returns: Arrayref of guidance strings (one per output line).
+
+=cut
 
 sub get_guidance {
     my ($cat_name, $files, $repo_dir) = @_;
@@ -470,6 +622,23 @@ sub get_guidance {
     return \@lines;
 }
 
+=head2 print_json
+
+Render the classification report as pretty-printed JSON for machine consumption.
+
+Produces a structure with keys: total_files, total_vr_needed, branch, fork_url,
+and categories (each with label, vr_needed, files, guidance).
+
+  print_json($report);
+
+Arguments:
+
+  $report - Hashref as returned by build_report_data()
+
+Returns: Nothing (prints JSON to stdout).
+
+=cut
+
 sub print_json {
     my ($report) = @_;
     my $categories = $report->{categories};
@@ -497,6 +666,20 @@ sub print_json {
 
     print JSON::PP->new->pretty->canonical->encode(\%out);
 }
+
+=head2 log_verbose
+
+Print a diagnostic message to stderr when verbose mode is active.
+
+  log_verbose($msg);
+
+Arguments:
+
+  $msg - Message string to print
+
+Returns: Nothing.
+
+=cut
 
 sub log_verbose {
     my ($msg) = @_;

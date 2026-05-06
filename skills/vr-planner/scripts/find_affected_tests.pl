@@ -1,29 +1,6 @@
 #!/usr/bin/perl
 # find_affected_tests.pl — Find test files affected by changes to lib/ modules.
-#
-# Given one or more lib/*.pm paths, scans the OSADO codebase and outputs
-# all test files that directly or transitively depend on the changed modules.
-#
-# Algorithm:
-#   1. Convert each lib/*.pm path to a Perl package name (lib/A/B.pm → A::B)
-#   2. Build a reverse dependency map by scanning all use/require in lib/ and tests/
-#   3. Walk transitive lib-to-lib dependents (BFS with cycle detection)
-#   4. Collect all tests/*.pm that import any package in the expanded set
-#   5. Print grouped by directory, with optional dependency chain output
-#
-# Five import syntaxes are recognized:
-#   use Mojo::Base 'Pkg::Name';        — inheritance (single parent)
-#   use Mojo::Base qw(Pkg1 Pkg2);      — inheritance (multiple parents, may be multiline)
-#   use Pkg::Name;                      — bare import
-#   use Pkg::Name qw(...);             — function import list (may be multiline)
-#   use Pkg::Name 'func';              — single function import
-#   require Pkg::Name;                 — runtime require
-#
-# Usage:
-#   perl find_affected_tests.pl lib/sles4sap/ipaddr2.pm
-#   perl find_affected_tests.pl --repo /path/to/osado lib/publiccloud/utils.pm
-#   perl find_affected_tests.pl --verbose lib/utils.pm lib/LTP/utils.pm
-#   perl find_affected_tests.pl --json lib/sles4sap/ipaddr2.pm
+# Run with --help for full usage information.
 
 use strict;
 use warnings;

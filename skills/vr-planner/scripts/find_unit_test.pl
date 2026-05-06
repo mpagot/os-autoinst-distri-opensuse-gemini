@@ -1,5 +1,5 @@
 #!/usr/bin/perl
-# find_unit_test.pl — Find unit test files (t/*.t) that cover a given lib/*.pm.
+# find_unit_test.pl : Find unit test files (t/*.t) that cover a given lib/*.pm.
 # Run with --help for full usage information.
 
 use strict;
@@ -92,7 +92,7 @@ for my $tf (@test_files) {
         chomp $line;
         next if $line =~ /^\s*#/;
 
-        # use Mojo::Base 'Pkg::Name'; — must be checked BEFORE the general 'use'
+        # use Mojo::Base 'Pkg::Name'; must be checked BEFORE the general 'use'
         # handler below, because the general handler would match 'Mojo::Base' and
         # then 'next' out of the loop body, making this branch unreachable.
         if ($line =~ /use\s+Mojo::Base\s+['"]([^'"]+)['"]/) {
@@ -270,7 +270,7 @@ sub log_verbose {
 
 sub print_usage {
     print <<'EOF';
-find_unit_test.pl — Find unit test files (t/*.t) that cover a given lib/*.pm.
+find_unit_test.pl : Find unit test files (t/*.t) that cover a given lib/*.pm.
 
 USAGE
     perl find_unit_test.pl [OPTIONS] lib/A/B.pm [lib/C/D.pm ...]
@@ -279,10 +279,10 @@ DESCRIPTION
     Given one or more lib/*.pm file paths, finds the corresponding unit test
     files in the t/ directory. Two matching strategies are used:
 
-    1. Import matching — scans every t/*.t file for use/require statements
+    1. Import matching: scans every t/*.t file for use/require statements
        that import the target lib package (e.g. "use sles4sap::ipaddr2;").
 
-    2. Naming convention — matches t/ files whose basename (after stripping
+    2. Naming convention: matches t/ files whose basename (after stripping
        the leading NN_ prefix) equals the lib module basename. For example,
        lib/sles4sap/ipaddr2.pm matches t/22_ipaddr2.t.
 

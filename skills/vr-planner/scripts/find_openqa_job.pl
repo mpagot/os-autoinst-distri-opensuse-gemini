@@ -1,28 +1,6 @@
 #!/usr/bin/perl
 # find_openqa_job.pl — Find openQA jobs to clone for verification runs (VR).
-#
-# Given YAML schedule paths (schedule/*.yml), queries a live openQA instance to
-# discover clonable passing jobs and outputs ready-to-use openqa-clone-job
-# commands.
-#
-# This script is a leaf node in the pipeline — it does NOT call other find_*.pl
-# scripts.  The orchestrator (classify_changes.pl, analyze_prs.py, or the user)
-# is responsible for resolving test files to schedule files first (via
-# find_test_schedule.pl) and passing the results here.
-#
-# Pipeline:
-#   Stage 1: YAML schedule → job IDs     (via job_settings/jobs API)
-#   Stage 2: Job IDs → TEST names        (sample recent job IDs for metadata)
-#   Stage 3: TEST + group → passing jobs  (filtered query for clone candidates)
-#   Stage 4: Output                       (clone commands + isos POST + hints)
-#
-# Usage:
-#   perl find_openqa_job.pl --osd schedule/sles4sap/cloud-components/ipaddr2.yml
-#   perl find_openqa_job.pl --host http://openqaworker15.qe.prg2.suse.org \
-#       --repo /path/to/osado schedule/sles4sap/cloud-components/ipaddr2.yml
-#   perl find_openqa_job.pl --o3 --json schedule/microos/libzypp.yaml
-#   perl find_openqa_job.pl --osd --casedir https://github.com/user/repo.git#branch \
-#       --build user_VR schedule/ha/bv/basic_cluster_node.yaml
+# Run with --help for full usage information.
 
 use strict;
 use warnings;
@@ -994,7 +972,6 @@ DEPENDENCIES
 SEE ALSO
     find_test_schedule.pl    — Resolve test modules to YAML schedule files
     classify_changes.pl      — Classify changed files and plan testing strategy
-    OPENQA_TECH.md           — openQA architecture and API reference
 EOF
     return 1;
 }
