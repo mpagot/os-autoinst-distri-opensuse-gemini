@@ -63,17 +63,6 @@ assert_file_exists() {
     fi
 }
 
-# Helper: check a directory exists
-assert_dir_exists() {
-    local path="$1"
-    local desc="$2"
-    if [[ -d "$path" ]]; then
-        log_pass "$desc: $path"
-    else
-        log_fail "$desc: $path (not found)"
-    fi
-}
-
 # Helper: check a symlink exists and points to expected target
 assert_symlink() {
     local path="$1"
@@ -115,8 +104,7 @@ reset_osado() {
 log_section "TEST 1: Source Repository Structure"
 
 assert_file_exists "$SRC_DIR/gemini-extension.json" "Extension manifest exists"
-assert_file_exists "$SRC_DIR/OSADO_GEMINI.md" "Context file exists"
-assert_file_exists "$SRC_DIR/osado_overlay/AGENTS.md" "Cross-tool AGENTS.md exists"
+assert_file_exists "$SRC_DIR/OSADO_AGENTS.md" "Context file exists"
 
 for skill in "${EXPECTED_SKILLS[@]}"; do
     assert_file_exists "$SRC_DIR/skills/$skill/SKILL.md" "Skill SKILL.md"
@@ -162,8 +150,8 @@ done
 
 # Verify GEMINI.md at root
 assert_symlink "$OSADO_DIR/GEMINI.md" \
-    "$SRC_DIR/OSADO_GEMINI.md" \
-    "install.sh: GEMINI.md -> OSADO_GEMINI.md"
+    "$SRC_DIR/OSADO_AGENTS.md" \
+    "install.sh: GEMINI.md -> OSADO_AGENTS.md"
 
 # =============================================================================
 # TEST 3: install.sh --portable (Cross-tool paths)
@@ -183,8 +171,8 @@ done
 
 # Verify AGENTS.md at root
 assert_symlink "$OSADO_DIR/AGENTS.md" \
-    "$SRC_DIR/osado_overlay/AGENTS.md" \
-    "--portable: AGENTS.md -> osado_overlay/AGENTS.md"
+    "$SRC_DIR/OSADO_AGENTS.md" \
+    "--portable: AGENTS.md -> OSADO_AGENTS.md"
 
 # =============================================================================
 # TEST 4: install.sh --uninstall
@@ -249,7 +237,7 @@ if has_command gemini; then
         log_skip "Extension directory not found (link may have failed)"
     fi
 else
-    log_skip "Gemini CLI not installed — skipping extension discovery tests"
+    log_skip "Gemini CLI not installed: skipping extension discovery tests"
 fi
 
 # =============================================================================
@@ -283,7 +271,7 @@ else
             "Claude Code (no CLI): .claude/skills/$skill/SKILL.md"
     done
 
-    log_skip "Claude Code not installed — verified file placement only"
+    log_skip "Claude Code not installed: verified file placement only"
 fi
 
 # =============================================================================
@@ -297,7 +285,7 @@ if has_command opencode; then
     # Set up OpenCode skill directory
     mkdir -p "$OSADO_DIR/.agents/skills"
     cp -r "$SRC_DIR/skills/"* "$OSADO_DIR/.agents/skills/"
-    cp "$SRC_DIR/osado_overlay/AGENTS.md" "$OSADO_DIR/AGENTS.md"
+    cp "$SRC_DIR/OSADO_AGENTS.md" "$OSADO_DIR/AGENTS.md"
 
     for skill in "${EXPECTED_SKILLS[@]}"; do
         assert_file_exists "$OSADO_DIR/.agents/skills/$skill/SKILL.md" \
@@ -310,7 +298,7 @@ else
     # Verify file structure
     mkdir -p "$OSADO_DIR/.agents/skills"
     cp -r "$SRC_DIR/skills/"* "$OSADO_DIR/.agents/skills/"
-    cp "$SRC_DIR/osado_overlay/AGENTS.md" "$OSADO_DIR/AGENTS.md"
+    cp "$SRC_DIR/OSADO_AGENTS.md" "$OSADO_DIR/AGENTS.md"
 
     for skill in "${EXPECTED_SKILLS[@]}"; do
         assert_file_exists "$OSADO_DIR/.agents/skills/$skill/SKILL.md" \
@@ -318,7 +306,7 @@ else
     done
     assert_file_exists "$OSADO_DIR/AGENTS.md" "OpenCode (no CLI): AGENTS.md at root"
 
-    log_skip "OpenCode not installed — verified file placement only"
+    log_skip "OpenCode not installed: verified file placement only"
 fi
 
 # =============================================================================
@@ -326,30 +314,29 @@ fi
 # =============================================================================
 log_section "TEST 8: Context File Validation"
 
-# OSADO_GEMINI.md should contain key OSADO project info
-if grep -q "os-autoinst" "$SRC_DIR/OSADO_GEMINI.md"; then
-    log_pass "OSADO_GEMINI.md references os-autoinst"
+# OSADO_AGENTS.md should contain key OSADO project info and workflow instructions
+if grep -q "os-autoinst" "$SRC_DIR/OSADO_AGENTS.md"; then
+    log_pass "OSADO_AGENTS.md references os-autoinst"
 else
-    log_fail "OSADO_GEMINI.md missing os-autoinst reference"
+    log_fail "OSADO_AGENTS.md missing os-autoinst reference"
 fi
 
-if grep -q "make test" "$SRC_DIR/OSADO_GEMINI.md"; then
-    log_pass "OSADO_GEMINI.md contains build commands"
+if grep -q "make" "$SRC_DIR/OSADO_AGENTS.md"; then
+    log_pass "OSADO_AGENTS.md contains build commands"
 else
-    log_fail "OSADO_GEMINI.md missing build commands"
+    log_fail "OSADO_AGENTS.md missing build commands"
 fi
 
-# osado_overlay/AGENTS.md should contain workflow instructions
-if grep -q "PERL5LIB" "$SRC_DIR/osado_overlay/AGENTS.md"; then
-    log_pass "AGENTS.md contains PERL5LIB setup"
+if grep -q "PERL5LIB" "$SRC_DIR/OSADO_AGENTS.md"; then
+    log_pass "OSADO_AGENTS.md contains PERL5LIB setup"
 else
-    log_fail "AGENTS.md missing PERL5LIB setup"
+    log_fail "OSADO_AGENTS.md missing PERL5LIB setup"
 fi
 
-if grep -q "make tidy" "$SRC_DIR/osado_overlay/AGENTS.md"; then
-    log_pass "AGENTS.md contains formatting commands"
+if grep -q "make tidy" "$SRC_DIR/OSADO_AGENTS.md"; then
+    log_pass "OSADO_AGENTS.md contains formatting commands"
 else
-    log_fail "AGENTS.md missing formatting commands"
+    log_fail "OSADO_AGENTS.md missing formatting commands"
 fi
 
 # =============================================================================

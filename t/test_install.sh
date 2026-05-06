@@ -92,7 +92,7 @@ assert_is_link "$FAKE_OSADO/.gemini/skills/openqa-log-analyzer/SKILL.md" \
     "$REPO_ROOT/skills/openqa-log-analyzer/SKILL.md"
 
 # Root GEMINI.md
-assert_is_link "$FAKE_OSADO/GEMINI.md" "$REPO_ROOT/OSADO_GEMINI.md"
+assert_is_link "$FAKE_OSADO/GEMINI.md" "$REPO_ROOT/OSADO_AGENTS.md"
 log_pass
 
 # ------------------------------------------------------------------------------
@@ -240,7 +240,7 @@ log_test "8: Root GEMINI.md - verify linking and protection"
 setup_fake_osado
 "$INSTALL_SCRIPT" "$FAKE_OSADO" > /dev/null 2>&1
 
-assert_is_link "$FAKE_OSADO/GEMINI.md" "$REPO_ROOT/OSADO_GEMINI.md"
+assert_is_link "$FAKE_OSADO/GEMINI.md" "$REPO_ROOT/OSADO_AGENTS.md"
 
 # Replace with a real file
 rm "$FAKE_OSADO/GEMINI.md"
@@ -269,7 +269,7 @@ assert_is_link "$FAKE_OSADO/.agents/skills/openqa-log-analyzer/scripts/extract_l
     "$REPO_ROOT/skills/openqa-log-analyzer/scripts/extract_log_section.sh"
 
 # AGENTS.md at root
-assert_is_link "$FAKE_OSADO/AGENTS.md" "$REPO_ROOT/osado_overlay/AGENTS.md"
+assert_is_link "$FAKE_OSADO/AGENTS.md" "$REPO_ROOT/OSADO_AGENTS.md"
 
 # .gemini/ should ALSO be linked (--portable adds to the default, not replaces it)
 assert_is_link "$FAKE_OSADO/.gemini/skills/perl-test-compile/SKILL.md" \

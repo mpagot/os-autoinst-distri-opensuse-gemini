@@ -206,9 +206,9 @@ if [ "$UNINSTALL" = true ]; then
     unlink_files "$REPO_ROOT" "commands"
     unlink_files "$REPO_ROOT" "skills"
 
-    # Remove root GEMINI.md if it points to our OSADO_GEMINI.md
+    # Remove root GEMINI.md if it points to our OSADO_AGENTS.md
     if [ -L "$OSADO_ABS_PATH/GEMINI.md" ]; then
-        if [ "$(readlink "$OSADO_ABS_PATH/GEMINI.md")" == "$REPO_ROOT/OSADO_GEMINI.md" ]; then
+        if [ "$(readlink "$OSADO_ABS_PATH/GEMINI.md")" == "$REPO_ROOT/OSADO_AGENTS.md" ]; then
             unlink "$OSADO_ABS_PATH/GEMINI.md"
             log_success "Unlinked GEMINI.md from OSADO root."
         fi
@@ -226,7 +226,7 @@ if [ "$UNINSTALL" = true ]; then
             TARGET_GEMINI_DIR="$local_target_backup"
         fi
         if [ -L "$OSADO_ABS_PATH/AGENTS.md" ]; then
-            if [ "$(readlink "$OSADO_ABS_PATH/AGENTS.md")" == "$REPO_ROOT/osado_overlay/AGENTS.md" ]; then
+            if [ "$(readlink "$OSADO_ABS_PATH/AGENTS.md")" == "$REPO_ROOT/OSADO_AGENTS.md" ]; then
                 unlink "$OSADO_ABS_PATH/AGENTS.md"
                 log_success "Unlinked AGENTS.md from OSADO root."
             fi
@@ -241,10 +241,10 @@ log_info "Deploying overlay files..."
 link_files "$REPO_ROOT" "commands"
 link_files "$REPO_ROOT" "skills"
 
-if [ -f "$REPO_ROOT/OSADO_GEMINI.md" ]; then
+if [ -f "$REPO_ROOT/OSADO_AGENTS.md" ]; then
     if [ ! -e "$OSADO_ABS_PATH/GEMINI.md" ]; then
-        ln -s "$REPO_ROOT/OSADO_GEMINI.md" "$OSADO_ABS_PATH/GEMINI.md"
-        log_success "Linked OSADO_GEMINI.md to OSADO root as GEMINI.md."
+        ln -s "$REPO_ROOT/OSADO_AGENTS.md" "$OSADO_ABS_PATH/GEMINI.md"
+        log_success "Linked OSADO_AGENTS.md to OSADO root as GEMINI.md."
     else
          log_info "GEMINI.md already exists in OSADO root. Skipping."
     fi
@@ -263,9 +263,9 @@ if [ "$PORTABLE" = true ]; then
     TARGET_GEMINI_DIR="$local_target_backup"
 
     # Link AGENTS.md to OSADO root (for OpenCode, Pi Agent, Copilot)
-    if [ -f "$REPO_ROOT/osado_overlay/AGENTS.md" ]; then
+    if [ -f "$REPO_ROOT/OSADO_AGENTS.md" ]; then
         if [ ! -e "$OSADO_ABS_PATH/AGENTS.md" ]; then
-            ln -s "$REPO_ROOT/osado_overlay/AGENTS.md" "$OSADO_ABS_PATH/AGENTS.md"
+            ln -s "$REPO_ROOT/OSADO_AGENTS.md" "$OSADO_ABS_PATH/AGENTS.md"
             log_success "Linked AGENTS.md to OSADO root (cross-tool compatibility)."
         else
             log_info "AGENTS.md already exists in OSADO root. Skipping."

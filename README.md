@@ -95,7 +95,7 @@ mkdir -p .agents/skills
 cp -r /path/to/os-autoinst-distri-opensuse-gemini/skills/* .agents/skills/
 
 # Also place the AGENTS.md context file at your repo root:
-cp /path/to/os-autoinst-distri-opensuse-gemini/osado_overlay/AGENTS.md ./AGENTS.md
+cp /path/to/os-autoinst-distri-opensuse-gemini/OSADO_AGENTS.md ./AGENTS.md
 ```
 
 Or use the manual installer with `--portable` (creates these symlinks for you).
@@ -116,7 +116,7 @@ Copilot reads `AGENTS.md` at the repository root for project context but does
 not support the skills/scripts mechanism:
 
 ```bash
-cp /path/to/os-autoinst-distri-opensuse-gemini/osado_overlay/AGENTS.md ./AGENTS.md
+cp /path/to/os-autoinst-distri-opensuse-gemini/OSADO_AGENTS.md ./AGENTS.md
 ```
 
 ## Repository Structure
@@ -124,9 +124,7 @@ cp /path/to/os-autoinst-distri-opensuse-gemini/osado_overlay/AGENTS.md ./AGENTS.
 ```
 .
 ├── gemini-extension.json    # Extension manifest (for native Gemini install)
-├── OSADO_GEMINI.md          # Context file loaded every Gemini session
-├── osado_overlay/
-│   └── AGENTS.md            # Agent guidelines for the target OSADO repo
+├── OSADO_AGENTS.md          # Agent guidelines deployed to OSADO (context + workflow)
 ├── skills/                  # Agent skills (SKILL.md + scripts)
 │   ├── perl-test-compile/
 │   ├── comment-extractor/
