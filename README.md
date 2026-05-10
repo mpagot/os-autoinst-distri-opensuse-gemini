@@ -161,15 +161,14 @@ Gemini CLI session.
 ### Testing
 
 ```bash
-# Run overlay installer tests
-./t/test_install.sh
+# Run all local tests (installer + lint)
+make test
 
-# Run integration tests (requires container runtime)
-podman build -t osado-ai-test -f t/Containerfile .
-podman run --rm osado-ai-test
+# Run integration tests (requires podman or docker)
+make test-integration
 
-# Lint bash scripts
-shellcheck tools/*.sh t/*.sh skills/*/scripts/*.sh
+# Or with docker instead of podman
+make test-integration CONTAINER_RT=docker
 ```
 
 ## License

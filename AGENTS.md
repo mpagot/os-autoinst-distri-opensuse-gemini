@@ -5,110 +5,53 @@ commands** for the `os-autoinst-distri-opensuse` (OSADO) project. It is
 packaged as a Gemini CLI extension and also supports OpenCode, Claude Code,
 and Pi Agent via the [Agent Skills open standard](https://agentskills.io).
 
-As an agent working in *this* repository, your focus is on creating, refining,
-and validating skills that help OSADO developers.
+Your focus is on creating, refining, and validating skills that help OSADO
+developers. See `README.md` for installation options and user-facing
+documentation.
 
 ## 1. Build, Lint, and Test
 
-### Test Suite
+Run `make help` to list all targets. Key targets:
 
-*   **Run overlay installer tests:**
-    ```bash
-    ./t/test_install.sh
-    ```
-    *Note: Creates a temporary `fake_osado` directory to simulate the target.*
-
-*   **Run integration tests (requires podman or docker):**
-    The CI container image is maintained in a separate repository:
-    [`mpagot/osado-gemini-tester`](https://github.com/mpagot/osado-gemini-tester)
-    (published to `ghcr.io/mpagot/osado-gemini-tester:latest`).
-    It includes gemini-cli, opencode, claude-code, git, perl, jq, and gh.
-    ```bash
-    podman run --rm -v "$PWD:/src:ro" -w /src \
-        ghcr.io/mpagot/osado-gemini-tester:latest ./t/test_integration.sh
-    ```
-
-### Development Workflow
-
-To test the extension locally with Gemini CLI:
 ```bash
-gemini extensions link .
-# Then start a new gemini session: skills/commands/context load automatically
+make test              # installer tests + shellcheck (no container needed)
+make test-integration  # integration tests in container
+make clean             # remove test artifacts
 ```
 
-To test the legacy manual installer:
-```bash
-./tools/install.sh /path/to/local/os-autoinst-distri-opensuse
-./tools/install.sh --uninstall /path/to/local/os-autoinst-distri-opensuse
-```
+Always run `make test` before committing. Run `make test-integration` when
+modifying skills or the install script.
 
-### Linting
-*   **Bash:** Use `shellcheck` for all `.sh` files.
-    ```bash
-    shellcheck tools/*.sh t/*.sh skills/*/scripts/*.sh
-    ```
-*   **Markdown:** Ensure valid YAML frontmatter in `SKILL.md` files.
+Linting: `shellcheck` is enforced on all `.sh` files. Ensure valid YAML
+frontmatter in all `SKILL.md` files.
 
-## 2. Code Style & Conventions
+## 2. Code Style
 
-### Bash Scripts (`*.sh`)
-*   **Shebang:** Always use `#!/bin/bash`.
-*   **Error Handling:**
-    *   Start every script with `set -e` to fail fast.
-    *   Validate arguments at the beginning of the script.
-    *   Exit with `exit 1` on failure and `exit 0` on success.
-*   **Formatting:**
-    *   Indentation: 4 spaces.
-    *   Lines should generally not exceed 80-100 characters.
-    *   Use `[[ ... ]]` for conditions instead of `[ ... ]`.
-*   **Naming:**
-    *   Variables/Functions: `snake_case` (e.g., `link_files`, `target_dir`).
-    *   Globals/Constants: `UPPER_CASE` (e.g., `REPO_ROOT`, `OVERLAY_DIR`).
-*   **Scoping:** Use `local` for variables inside functions to avoid polluting the global namespace.
-*   **Logging:** Use color-coded helper functions for output (see `tools/install.sh` for reference):
-    *   `log_info` (Blue)
-    *   `log_success` (Green)
-    *   `log_warn` (Yellow)
-    *   `log_error` (Red)
-*   **Paths:**
-    *   **Absolute Paths:** Always resolve paths to absolute paths using `$(cd ... && pwd)`.
-    *   **Self-Location:** Never assume the script is run from a specific directory; use `dirname "${BASH_SOURCE[0]}"`.
-*   **Text Processing:** Prefer `awk` or `sed` for complex log parsing or text manipulation over Bash loops (see `extract_log_section.sh` or `audit.sh` for examples).
+### Bash (`*.sh`)
+*   Shebang: `#!/bin/bash`. Start with `set -e`.
+*   4-space indent. Lines ≤100 chars. Use `[[ ]]` not `[ ]`.
+*   `snake_case` for variables/functions; `UPPER_CASE` for globals/constants.
+*   `local` for all function variables.
+*   Logging: use `log_info`, `log_success`, `log_warn`, `log_error` (see `tools/install.sh`).
+*   Resolve paths to absolute (`$(cd ... && pwd)`). Self-locate with `dirname "${BASH_SOURCE[0]}"`.
+*   Prefer `awk`/`sed` over Bash loops for text processing.
 
-### Perl Scripts (`*.pl`)
-*   **Pragmas:** Always start with `use strict; use warnings;`.
-*   **CLI Arguments:** Use `Getopt::Long` for option parsing. All scripts must support `--help`, `--repo`, `--json`, and `--verbose`.
-*   **Documentation:**
-    *   Each function (except `print_usage`) gets a POD `=head2` block describing purpose, arguments, and return value.
-    *   `print_usage()` is the canonical usage reference — do not duplicate its content in header comments.
-*   **Naming:** `snake_case` for variables and functions (e.g., `get_git_files`, `$commit_hash`).
-*   **Dependencies:** Standard library only (`JSON::PP`, `Getopt::Long`, `File::Basename`, `Cwd`). No external CPAN modules.
-*   **Structured Output:** Use `JSON::PP` for `--json` mode. Use `JSON::PP::true`/`JSON::PP::false` for booleans.
-*   **Comments:** Keep comments that explain cryptic Perl syntax (e.g., `\Q\E` for regex literal quoting, `$? >> 8` for exit code extraction). Remove comments that merely restate what the code does.
-*   **Error Handling:** `die` with a descriptive message on unrecoverable errors. Validate inputs early.
-*   **Self-Location:** Use `dirname(abs_path($0))` to find sibling scripts, never hardcoded paths.
+### Perl (`*.pl`)
+*   `use strict; use warnings;` always.
+*   `Getopt::Long` for CLI args. Support `--help`, `--repo`, `--json`, `--verbose`.
+*   POD `=head2` for each function (except `print_usage`).
+*   `snake_case` naming. Standard library only (no CPAN).
+*   `JSON::PP` for structured output. `die` on unrecoverable errors.
+*   Self-locate with `dirname(abs_path($0))`.
 
 ### Skill Definitions (`SKILL.md`)
-1.  **YAML Frontmatter:** Must contain `name` and `description`.
-    ```yaml
-    ---
-    name: my-skill
-    description: Action-oriented description of what the skill does.
-    ---
-    ```
-2.  **Instructions:** Wrap the main prompt in `<instructions>` XML tags to clearly separate it from context.
-3.  **Be Action-Oriented:** Use clear, imperative language. Prefer scripts over inline logic.
-4.  **Directory Structure:**
-    *   Root: `skills/<skill-name>/`
-    *   Logic: `scripts/` (for complex Bash/Python/Perl logic). **Do not put logic in Markdown.**
-    *   Assets: `assets/` (templates, static files).
+*   YAML frontmatter with `name` and `description`.
+*   Wrap prompt body in `<instructions>` XML tags.
+*   Put logic in `scripts/`, not in Markdown. Use `assets/` for templates.
 
 ### Custom Commands (`commands/`)
-*   Defined in TOML files (e.g., `github_pr_create.toml`).
-*   Must contain `description` and `prompt`.
-*   Use `"""` for multi-line prompts.
-*   Use placeholders like `!{shell command}` for dynamic context injection.
-*   **Note:** Custom commands are Gemini CLI-only (TOML format is not portable).
+*   TOML files with `description` and `prompt`. Gemini CLI only.
+*   Use `"""` for multi-line prompts and `!{shell command}` for dynamic context.
 
 ## 3. Architecture
 
@@ -125,29 +68,33 @@ This repository supports multiple installation strategies:
 
 ### Key Files
 
-| File | Purpose | Audience |
-|------|---------|----------|
-| `gemini-extension.json` | Extension manifest | Gemini CLI (native install) |
-| `skills/` | Agent skills (SKILL.md + scripts) | All tools |
-| `commands/` | Custom slash commands (TOML) | Gemini CLI only |
-| `AGENTS.md` (this file) | Dev guidelines for THIS repo | Developers |
+| File | Purpose |
+|------|---------|
+| `gemini-extension.json` | Extension manifest (Gemini CLI) |
+| `GEMINI.md` | Agent context loaded by Gemini CLI |
+| `OSADO_AGENTS.md` | Agent guidelines deployed to OSADO repos |
+| `skills/` | Agent skills (`SKILL.md` + `scripts/`) |
+| `commands/` | Custom slash commands (TOML, Gemini CLI only) |
+| `tools/install.sh` | Legacy symlink installer |
+| `Makefile` | Development build/test/lint targets |
+| `AGENTS.md` | Developer guidelines for THIS repo (this file) |
 
 ### Common Tasks
-*   **Adding a new Skill:**
-    1.  Create directory `skills/<name>/`.
-    2.  Add `SKILL.md` with YAML frontmatter.
-    3.  Add `scripts/` if needed.
-    4.  Run `./t/test_install.sh` to verify it links correctly.
-    5.  Test with `gemini extensions link .` and start a new session.
-*   **Modifying the Install Script:**
-    *   Edit `tools/install.sh`.
-    *   **MUST** run `./t/test_install.sh` to verify no regression in safety checks.
+
+**Adding a new Skill:**
+1.  Create `skills/<name>/SKILL.md` with YAML frontmatter.
+2.  Add `scripts/` and `assets/` as needed.
+3.  Run `make test` to verify linking and linting.
+4.  Test with `gemini extensions link .` and start a new session.
+
+**Modifying the Install Script:**
+Edit `tools/install.sh`, then run `make test` to verify no regressions.
 
 ## 4. Safety Rules
 
-1.  **Non-Destructive:** The install script will *never* overwrite a file in the target that is not a symlink to this repo.
-2.  **Conflict Awareness:** When adding new files, ensure they don't conflict with common user filenames.
-3.  **Symlink Logic:** The installer mirrors the directory structure (using `mkdir -p`) but symlinks individual files. This allows users to add their own files alongside ours.
+1.  **Non-Destructive:** The install script never overwrites a file that is not a symlink to this repo.
+2.  **Conflict Awareness:** New files must not conflict with common user filenames.
+3.  **Symlink Logic:** The installer mirrors directory structure (`mkdir -p`) but symlinks individual files.
 4.  **No Secrets:** Never hardcode API keys or credentials.
-5.  **Injection Prevention:** Be mindful of how user input is passed to shell scripts to prevent command injection.
-6.  **No PII:** Do not mention specific users (names or GitHub handles) or name specific teams.
+5.  **Injection Prevention:** Sanitize user input passed to shell scripts.
+6.  **No PII:** Do not mention specific users, GitHub handles, or team names.
