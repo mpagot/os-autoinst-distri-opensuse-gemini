@@ -32,9 +32,6 @@ discovered automatically.
 ```bash
 # User-level (available across all projects)
 gemini extensions install https://github.com/mpagot/os-autoinst-distri-opensuse-gemini
-
-# Workspace-level (only active in your OSADO clone)
-gemini extensions install https://github.com/mpagot/os-autoinst-distri-opensuse-gemini --scope workspace
 ```
 
 **Workspace-level is recommended** since the context and skills are
