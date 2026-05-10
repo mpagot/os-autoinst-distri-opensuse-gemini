@@ -10,7 +10,6 @@ on-demand pair programmer aware of OSADO architecture and workflows.
 | Skill | Description |
 |-------|-------------|
 | `perl-test-compile` | Compile-check Perl files with correct OSADO `PERL5LIB` |
-| `comment-extractor` | Extract and search GitHub PR comments from OSADO |
 | `vr-planner` | Plan verification runs for code changes |
 | `sles4sap-catalog` | Add/audit Perldoc headers on SLES4SAP test modules |
 | `openqa-log-analyzer` | Parse and extract sections from `autoinst-log.txt` |
@@ -124,7 +123,6 @@ cp /path/to/os-autoinst-distri-opensuse-gemini/OSADO_AGENTS.md ./AGENTS.md
 ├── OSADO_AGENTS.md          # Agent guidelines deployed to OSADO (context + workflow)
 ├── skills/                  # Agent skills (SKILL.md + scripts)
 │   ├── perl-test-compile/
-│   ├── comment-extractor/
 │   ├── vr-planner/
 │   ├── sles4sap-catalog/
 │   └── openqa-log-analyzer/

@@ -35,7 +35,6 @@ OSADO_DIR="/osado"
 # Expected skills (directory names)
 EXPECTED_SKILLS=(
     "perl-test-compile"
-    "comment-extractor"
     "vr-planner"
     "sles4sap-catalog"
     "openqa-log-analyzer"
