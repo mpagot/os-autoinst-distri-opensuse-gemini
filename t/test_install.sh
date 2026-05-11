@@ -296,5 +296,4 @@ assert_not_exists "$FAKE_OSADO/AGENTS.md"
 assert_not_exists "$FAKE_OSADO/.gemini/skills/perl-test-compile/SKILL.md"
 log_pass
 
-# ==============================================================================
 echo -e "\n${GREEN}All tests passed successfully!${NC}"
