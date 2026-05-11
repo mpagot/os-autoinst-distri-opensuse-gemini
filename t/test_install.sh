@@ -80,8 +80,8 @@ setup_fake_osado
 "$INSTALL_SCRIPT" "$FAKE_OSADO" > /dev/null 2>&1
 
 # Commands
-assert_is_link "$FAKE_OSADO/.gemini/commands/github_pr_create.toml" \
-    "$REPO_ROOT/commands/github_pr_create.toml"
+assert_is_link "$FAKE_OSADO/.gemini/commands/osado/github_pr_create.toml" \
+    "$REPO_ROOT/commands/osado/github_pr_create.toml"
 
 # Skills (check a few representative files)
 assert_is_link "$FAKE_OSADO/.gemini/skills/perl-test-compile/SKILL.md" \
@@ -101,8 +101,8 @@ log_pass
 # ------------------------------------------------------------------------------
 log_test "2: Conflict Protection - Do not overwrite user files"
 setup_fake_osado
-mkdir -p "$FAKE_OSADO/.gemini/commands"
-echo "USER_CONTENT" > "$FAKE_OSADO/.gemini/commands/github_pr_create.toml"
+mkdir -p "$FAKE_OSADO/.gemini/commands/osado"
+echo "USER_CONTENT" > "$FAKE_OSADO/.gemini/commands/osado/github_pr_create.toml"
 
 # Run install
 "$INSTALL_SCRIPT" "$FAKE_OSADO" > "$TEST_ROOT/install_output.log" 2>&1 || true
@@ -111,8 +111,8 @@ echo "USER_CONTENT" > "$FAKE_OSADO/.gemini/commands/github_pr_create.toml"
 grep -q "Conflict" "$TEST_ROOT/install_output.log" || log_fail "No conflict warning found in output"
 
 # Verify user file is untouched
-[ ! -L "$FAKE_OSADO/.gemini/commands/github_pr_create.toml" ] || log_fail "User file was replaced by a link!"
-assert_content "$FAKE_OSADO/.gemini/commands/github_pr_create.toml" "USER_CONTENT"
+[ ! -L "$FAKE_OSADO/.gemini/commands/osado/github_pr_create.toml" ] || log_fail "User file was replaced by a link!"
+assert_content "$FAKE_OSADO/.gemini/commands/osado/github_pr_create.toml" "USER_CONTENT"
 
 # Verify other files ARE linked
 assert_is_link "$FAKE_OSADO/.gemini/skills/perl-test-compile/SKILL.md" \
@@ -134,7 +134,7 @@ echo "MY_SKILL" > "$FAKE_OSADO/.gemini/skills/my_skill.md"
 "$INSTALL_SCRIPT" --uninstall "$FAKE_OSADO" > /dev/null 2>&1
 
 # Verify toolset links are gone
-assert_not_exists "$FAKE_OSADO/.gemini/commands/github_pr_create.toml"
+assert_not_exists "$FAKE_OSADO/.gemini/commands/osado/github_pr_create.toml"
 assert_not_exists "$FAKE_OSADO/.gemini/skills/perl-test-compile/SKILL.md"
 assert_not_exists "$FAKE_OSADO/.gemini/skills/openqa-log-analyzer/SKILL.md"
 
@@ -174,8 +174,8 @@ setup_fake_osado
 "$INSTALL_SCRIPT" "$FAKE_OSADO" > /dev/null 2>&1
 
 # openqa-log-analyzer has scripts/
-assert_is_link "$FAKE_OSADO/.gemini/skills/openqa-log-analyzer/scripts/extract_log_section.sh" \
-    "$REPO_ROOT/skills/openqa-log-analyzer/scripts/extract_log_section.sh"
+assert_is_link "$FAKE_OSADO/.gemini/skills/openqa-log-analyzer/scripts/extract_log_section.pl" \
+    "$REPO_ROOT/skills/openqa-log-analyzer/scripts/extract_log_section.pl"
 
 # sles4sap-catalog has scripts/ and assets/
 assert_is_link "$FAKE_OSADO/.gemini/skills/sles4sap-catalog/scripts/audit.sh" \
@@ -217,16 +217,16 @@ rm "$FAKE_OSADO/.gemini/skills/perl-test-compile/SKILL.md"
 echo "USER_MODIFIED" > "$FAKE_OSADO/.gemini/skills/perl-test-compile/SKILL.md"
 
 # Replace a symlink with a different link
-rm "$FAKE_OSADO/.gemini/commands/github_pr_create.toml"
-ln -s "/tmp" "$FAKE_OSADO/.gemini/commands/github_pr_create.toml"
+rm "$FAKE_OSADO/.gemini/commands/osado/github_pr_create.toml"
+ln -s "/tmp" "$FAKE_OSADO/.gemini/commands/osado/github_pr_create.toml"
 
 # Run uninstall
 "$INSTALL_SCRIPT" --uninstall "$FAKE_OSADO" > /dev/null 2>&1
 
 # Verify modified files are preserved
 assert_content "$FAKE_OSADO/.gemini/skills/perl-test-compile/SKILL.md" "USER_MODIFIED"
-[ -L "$FAKE_OSADO/.gemini/commands/github_pr_create.toml" ] || log_fail "User symlink was deleted!"
-[ "$(readlink "$FAKE_OSADO/.gemini/commands/github_pr_create.toml")" == "/tmp" ] || log_fail "User symlink points to wrong place"
+[ -L "$FAKE_OSADO/.gemini/commands/osado/github_pr_create.toml" ] || log_fail "User symlink was deleted!"
+[ "$(readlink "$FAKE_OSADO/.gemini/commands/osado/github_pr_create.toml")" == "/tmp" ] || log_fail "User symlink points to wrong place"
 
 # Verify other toolset links ARE removed
 assert_not_exists "$FAKE_OSADO/.gemini/skills/openqa-log-analyzer/SKILL.md"
@@ -265,8 +265,8 @@ assert_is_link "$FAKE_OSADO/.agents/skills/perl-test-compile/SKILL.md" \
     "$REPO_ROOT/skills/perl-test-compile/SKILL.md"
 assert_is_link "$FAKE_OSADO/.agents/skills/openqa-log-analyzer/SKILL.md" \
     "$REPO_ROOT/skills/openqa-log-analyzer/SKILL.md"
-assert_is_link "$FAKE_OSADO/.agents/skills/openqa-log-analyzer/scripts/extract_log_section.sh" \
-    "$REPO_ROOT/skills/openqa-log-analyzer/scripts/extract_log_section.sh"
+assert_is_link "$FAKE_OSADO/.agents/skills/openqa-log-analyzer/scripts/extract_log_section.pl" \
+    "$REPO_ROOT/skills/openqa-log-analyzer/scripts/extract_log_section.pl"
 
 # AGENTS.md at root
 assert_is_link "$FAKE_OSADO/AGENTS.md" "$REPO_ROOT/OSADO_AGENTS.md"
@@ -296,5 +296,4 @@ assert_not_exists "$FAKE_OSADO/AGENTS.md"
 assert_not_exists "$FAKE_OSADO/.gemini/skills/perl-test-compile/SKILL.md"
 log_pass
 
-# ==============================================================================
 echo -e "\n${GREEN}All tests passed successfully!${NC}"

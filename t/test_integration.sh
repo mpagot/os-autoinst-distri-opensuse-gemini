@@ -42,7 +42,8 @@ EXPECTED_SKILLS=(
 
 # Expected commands
 EXPECTED_COMMANDS=(
-    "github_pr_create.toml"
+    "osado/git_commit.toml"
+    "osado/github_pr_create.toml"
 )
 
 log_info() { echo -e "${BLUE}[INFO]${NC} $1"; }

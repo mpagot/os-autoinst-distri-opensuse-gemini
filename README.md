@@ -5,6 +5,76 @@ AI-powered developer productivity skills for the
 (OSADO) project. Provides modular **Skills** and **Commands** that act as an
 on-demand pair programmer aware of OSADO architecture and workflows.
 
+## See It in Action
+
+A few examples of what the assistant can do during a typical OSADO session.
+
+### 🔍 Plan what to test after a code change
+
+```
+You: I changed lib/sles4sap/azure_cli.pm -- what do I need to test?
+
+AI:  Your change touches 1 library file. Here's the verification plan:
+     - Unit test: prove -l -Ios-autoinst/ t/sles4sap/azure_cli.t
+     - Affected tests: tests/sles4sap/hana_install.pm, tests/sles4sap/azure_deploy.pm
+     - Schedules: schedule/sles4sap/hana_node.yaml
+     To get a clonable openQA job, confirm the target instance (osd or o3).
+```
+
+### 🩺 Understand openQA log files
+
+```
+You: I have the autoinst-log.txt from a failed job. The hana_install module
+     timed out -- was it a real failure or infrastructure lag?
+
+AI:  Running health check on autoinst-log.txt... 1 timeout detected in hana_install.
+     Running lag detection... backend loop count: 243,891 (threshold: 100,000).
+     Verdict: infrastructure stress on the worker host. The SUT likely had no issue.
+     Recommend: re-run the job on a different worker.
+```
+
+### ✅ Quick syntax check after editing Perl
+
+```
+You: Does tests/sles4sap/hana_install.pm still compile?
+
+AI:  Running perl -c with PERL5LIB=.:lib:os-autoinst:os-autoinst/lib ...
+     tests/sles4sap/hana_install.pm ... PASS
+     All 1 file(s) passed compilation.
+```
+
+### 📝 Generate Perldoc headers for the test catalog
+
+```
+You: Add a documentation header to tests/sles4sap/qesap_ansible.pm
+
+AI:  Reading file... identified 3 openQA variables (ANSIBLE_PLAYBOOK, PUBLIC_CLOUD_PROVIDER,
+     QESAP_DEPLOYMENT_DIR) and 2 library dependencies (lib/sles4sap/qesapdeployment.pm,
+     lib/publiccloud/utils.pm).
+     Header generated from template. Running audit... PASS.
+     Metadata check... OK. POD whitespace... OK.
+```
+
+### 🚀 Commit and open a PR in one shot
+
+```
+You: /github_pr_create
+
+AI:  Inspecting staged changes... 2 files modified (lib/sles4sap/azure_cli.pm, t/sles4sap/azure_cli.t).
+     Proposed commit message:
+       "Add retry logic to azure_cli resource group creation"
+     Written to commit_message.txt -- please review and confirm.
+
+You: Looks good, go ahead.
+
+AI:  Committed. Pushing to origin/add-retry-azure-cli...
+     Creating PR against os-autoinst/os-autoinst-distri-opensuse...
+     PR #18742 created: https://github.com/os-autoinst/os-autoinst-distri-opensuse/pull/18742
+```
+
+For a complete list of use cases and detailed explanations, see
+[Use Cases and Workflows](docs/USE_CASES.md).
+
 ## Skills Included
 
 | Skill | Description |
@@ -127,7 +197,9 @@ cp /path/to/os-autoinst-distri-opensuse-gemini/OSADO_AGENTS.md ./AGENTS.md
 │   ├── sles4sap-catalog/
 │   └── openqa-log-analyzer/
 ├── commands/                # Custom commands (Gemini CLI only, TOML)
-│   └── github_pr_create.toml
+│   └── osado/
+│       ├── git_commit.toml
+│       └── github_pr_create.toml
 ├── tools/
 │   └── install.sh           # Legacy manual installer
 ├── t/                       # Test suite
