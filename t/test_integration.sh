@@ -42,6 +42,7 @@ EXPECTED_SKILLS=(
 
 # Expected commands
 EXPECTED_COMMANDS=(
+    "osado/git_commit.toml"
     "osado/github_pr_create.toml"
 )
 

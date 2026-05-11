@@ -10,10 +10,10 @@ Here are the steps you need to follow:
     -   Analyze the diff to understand the changes that have been made.
 
 2.  **Propose a commit message:**
-    -   Based on your analysis of the diff, propose a concise and informative commit message.
-    -   Please use suggestions about th ecommit message in the `Details in commit messages` section of the @CONTRIBUTING.md file
-    -   The commit message should not follow the conventional commit format: `feat(scope): description`. Please only give a description without `feat`.
-    -   The body of the commit message should explain the "what" and "why" of the changes.
+    -   Based on your analysis of the diff, propose a concise and informative commit message that strictly follows the **OSADO CONTRIBUTING.md** rules:
+        -   **Subject line:** Must start with a capital letter or a tag (e.g., `Fix deep issue...` or `bugfix: Fix...`). Must NOT exceed 72 characters, must NOT end with a dot, and must NOT use conventional commit tags like `(feat)`.
+        -   **Body:** Must have an empty newline between the subject and the body. Explain **"what"** and **"why"** of the changes. Include bug/ticket references if applicable (e.g., `bsc#12345`, `poo#12345`).
+    -   Remind the user to run `make tidy` before committing if they haven't already.
 
 3.  **Get user approval for the commit message:**
     -   Write the proposed commit message to a temporary file (e.g., `commit_message.txt`).
