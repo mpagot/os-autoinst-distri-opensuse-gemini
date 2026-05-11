@@ -19,12 +19,11 @@ openQA jobs produce several log files. This skill operates on two:
 | `autoinst-log.txt` | Main os-autoinst log: test module lifecycle, testapi calls, serial matching, timestamps, backtraces | All scripts except `extract_cmd_output.pl` |
 | `serial_terminal.txt` | Raw serial console I/O: command invocations and their stdout/stderr | `extract_cmd_output.pl` only |
 
-**Locating log files:** When the user provides a directory, most scripts
-auto-append `autoinst-log.txt`. For `extract_cmd_output.pl`, the user must
-point to the `serial_terminal.txt` file explicitly. Typical locations:
-- Job result directory: `testresults/<job_id>/`
-- Downloaded logs: any user-chosen directory
-- The `personal/` directory in the OSADO repo contains sample logs
+**The user provides local log files.** This skill does not download, fetch,
+or retrieve logs from any openQA instance. When the user provides a
+directory, most scripts auto-append `autoinst-log.txt`. For
+`extract_cmd_output.pl`, the user must point to the `serial_terminal.txt`
+file explicitly.
 
 ## Tools & Scripts
 
@@ -122,6 +121,10 @@ This answers: *"Which module regressed?"* or *"Where is the overhead?"*
 
 ## Rules
 
+* Do NOT download, fetch, or attempt to retrieve log files from any openQA
+  instance or remote server. The user is responsible for obtaining logs and
+  making them available locally. If the user has not provided a log file path,
+  ask them where the logs are.
 * Do NOT re-implement the helpers' logic in shell, grep, awk, or file
   exploration tools. Always call the Perl scripts.
 * Always prefer `--json` when processing results programmatically. Use the

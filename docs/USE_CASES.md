@@ -12,6 +12,8 @@ For a quick visual overview, see the
 | Situation | Skill / Command |
 |-----------|-----------------|
 | "I changed `lib/foo.pm`, what do I test?" | `vr-planner` |
+| "Which functions did I actually change, and who calls them?" | `vr-planner` (function-level) |
+| "I edited a schedule YAML, which openQA job do I clone?" | `vr-planner` (Phase 3) |
 | "Give me an `openqa-clone-job` command for my change" | `vr-planner` (Phase 3) |
 | "I have `autoinst-log.txt` from a failed job -- what happened?" | `openqa-log-analyzer` |
 | "Was this timeout caused by a slow worker host?" | `openqa-log-analyzer` |
@@ -26,43 +28,48 @@ The `vr-planner` skill answers the question every OSADO developer faces after
 making changes: **"How do I verify this?"**
 
 It analyses your `git diff`, classifies touched files by category (`lib/`,
-`tests/`, `data/`, `schedule/`), and produces a concrete testing plan. The
-skill operates in three phases.
+`tests/`, `data/`, `schedule/`, `t/`), and produces a concrete testing plan
+with copy-paste commands. The skill operates in three phases:
 
-**Phase 1 -- Classify and plan (offline).** A single orchestrator script
-(`classify_changes.pl`) reads the change set and chains the right helpers
-automatically:
+1. **Classify and plan (offline)** -- analyses the change set, identifies
+   affected unit tests, dependent test modules, YAML schedules, and data
+   consumers. Produces ready-to-run `prove` commands and identifies the
+   schedules you need to clone.
+2. **Targeted deep-dive (on request)** -- provides more detail on a specific
+   category when asked.
+3. **Find a clonable openQA job (network, user-gated)** -- queries a live
+   openQA instance and produces copy-paste `openqa-clone-job` commands with
+   your fork and branch pre-filled. Always confirms the target host first.
 
-- `find_unit_test.pl` -- locates unit tests in `t/` for changed library modules.
-- `find_affected_tests.pl` -- finds test modules in `tests/` that import
-  changed libraries, with optional function-level caller analysis.
-- `find_test_schedule.pl` -- resolves test modules to YAML schedule files.
-- `find_data_consumers.pl` -- traces which Perl files reference changed data
-  files.
-
-**Phase 2 -- Targeted deep-dive (on request).** If you want more detail on one
-category, the individual helpers can be called directly with specific files.
-
-**Phase 3 -- Find a clonable openQA job (network, user-gated).**
-`find_openqa_job.pl` queries a live openQA instance and produces copy-paste
-`openqa-clone-job` commands with your fork and branch pre-filled as `CASEDIR`.
-The skill always confirms the target host before making network calls.
+For implementation details, pipeline diagrams, and JSON piping contracts, see
+the [vr-planner README](../skills/vr-planner/README.md).
 
 ### Practical situations
 
 - **After editing a library module (`lib/*.pm`):** You changed
-  `lib/sles4sap/azure_cli.pm`. The skill finds the matching unit test, lists
-  all test modules that import the library, and identifies the YAML schedules
-  to clone.
+  `lib/sles4sap/azure_cli.pm`. The skill finds the matching unit test and
+  outputs the exact `prove` command, lists all test modules that depend on the
+  library, and identifies the YAML schedules to clone. If there is no unit
+  test yet, it suggests a filename for a new one.
+
+- **Narrowing the blast radius of a lib change:** Your change touches a widely
+  imported library. The skill can perform function-level analysis to identify
+  which tests actually call the specific functions you changed, cutting a list
+  of 40 candidates down to the 3 that matter.
 
 - **After editing a test module (`tests/*.pm`):** You modified
   `tests/sles4sap/hana_install.pm`. The skill locates which
-  `schedule/*.yml` files include it, so you know exactly which openQA job to
-  clone.
+  `schedule/*.yml` files include it -- even through indirect scheduling -- so
+  you know exactly which openQA job to clone.
+
+- **After editing a schedule file (`schedule/*.yml`):** You changed a YAML
+  schedule directly. The skill can take it straight to job lookup -- no
+  intermediate test-to-schedule resolution needed.
 
 - **After editing data files (`data/*`):** You changed a template or config
-  under `data/`. The skill finds all Perl files that reference that data file,
-  so you can trace the impact.
+  under `data/`. The skill finds consumers even when the code references the
+  file via a variable or partial path, going beyond what a literal grep would
+  catch.
 
 - **Getting a clonable openQA job:** Once schedules are identified, the skill
   queries openqa.suse.de (for SLE) or openqa.opensuse.org (for Tumbleweed) and
@@ -70,14 +77,16 @@ The skill always confirms the target host before making network calls.
 
 - **Deciding whether a VR is needed at all:** For changes limited to `t/`,
   `.github/`, `Makefile`, `variables.md`, or pure comment/lint fixes, the skill
-  reports that no VR is required.
+  reports that no VR is required -- though for `t/` changes it still outputs the
+  `prove` commands to run the affected unit tests locally.
 
 ## 2. Understanding openQA Log Files -- `openqa-log-analyzer`
 
 The `openqa-log-analyzer` skill helps developers make sense of the log files
-produced by os-autoinst during test execution. It does not download or fetch
-logs -- the developer provides local log files and the skill parses their
-internal structure.
+produced by os-autoinst during test execution. It operates exclusively on
+local log files that the developer has already downloaded -- the skill never
+fetches or retrieves logs from any openQA instance. Obtaining and providing
+the log files is the developer's responsibility.
 
 openQA jobs produce two key log files that this skill operates on:
 
@@ -86,16 +95,9 @@ openQA jobs produce two key log files that this skill operates on:
 | `autoinst-log.txt` | Test module lifecycle, testapi calls, serial matching, timestamps, backtraces |
 | `serial_terminal.txt` | Raw serial console I/O: command invocations and their stdout/stderr |
 
-The skill provides six Perl scripts, each targeting a specific analysis need:
-
-| Script | Purpose |
-|--------|---------|
-| `analyze_log_health.pl` | Quick triage: surfaces errors, timeouts, backtraces, and stress warnings |
-| `detect_lag.pl` | Correlates backend loop counts with timeouts to identify infrastructure stress |
-| `extract_log_section.pl` | Lists test modules or extracts a specific module's log slice |
-| `measure_cmd_time.pl` | Per-command execution timing with duration filters |
-| `extract_cmd_output.pl` | Extracts what a specific command printed from `serial_terminal.txt` |
-| `compare_modules_time.pl` | Side-by-side module timing comparison across two log files |
+For implementation details on the individual analysis scripts, their CLI
+options, and usage examples, see the
+[scripts README](../skills/openqa-log-analyzer/scripts/README.md).
 
 ### Practical situations
 

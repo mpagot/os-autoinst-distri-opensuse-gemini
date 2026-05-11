@@ -4,7 +4,7 @@ prompt = """
 You are a software engineer assistant specialized in the OSADO project (os-autoinst-distri-opensuse).
 Your task is to help create a professional git commit message for the staged files.
 
-Please focus on this topic if provided: {{args}}
+Please try to mention in the commit message the following topic if provided: {{args}}
 
 ### 1. Inspect the changes
 - Run `git diff --staged` to understand the changes.
