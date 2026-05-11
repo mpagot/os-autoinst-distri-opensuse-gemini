@@ -174,8 +174,8 @@ setup_fake_osado
 "$INSTALL_SCRIPT" "$FAKE_OSADO" > /dev/null 2>&1
 
 # openqa-log-analyzer has scripts/
-assert_is_link "$FAKE_OSADO/.gemini/skills/openqa-log-analyzer/scripts/extract_log_section.sh" \
-    "$REPO_ROOT/skills/openqa-log-analyzer/scripts/extract_log_section.sh"
+assert_is_link "$FAKE_OSADO/.gemini/skills/openqa-log-analyzer/scripts/extract_log_section.pl" \
+    "$REPO_ROOT/skills/openqa-log-analyzer/scripts/extract_log_section.pl"
 
 # sles4sap-catalog has scripts/ and assets/
 assert_is_link "$FAKE_OSADO/.gemini/skills/sles4sap-catalog/scripts/audit.sh" \
@@ -265,8 +265,8 @@ assert_is_link "$FAKE_OSADO/.agents/skills/perl-test-compile/SKILL.md" \
     "$REPO_ROOT/skills/perl-test-compile/SKILL.md"
 assert_is_link "$FAKE_OSADO/.agents/skills/openqa-log-analyzer/SKILL.md" \
     "$REPO_ROOT/skills/openqa-log-analyzer/SKILL.md"
-assert_is_link "$FAKE_OSADO/.agents/skills/openqa-log-analyzer/scripts/extract_log_section.sh" \
-    "$REPO_ROOT/skills/openqa-log-analyzer/scripts/extract_log_section.sh"
+assert_is_link "$FAKE_OSADO/.agents/skills/openqa-log-analyzer/scripts/extract_log_section.pl" \
+    "$REPO_ROOT/skills/openqa-log-analyzer/scripts/extract_log_section.pl"
 
 # AGENTS.md at root
 assert_is_link "$FAKE_OSADO/AGENTS.md" "$REPO_ROOT/OSADO_AGENTS.md"
