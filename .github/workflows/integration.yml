@@ -11,28 +11,34 @@ jobs:
     name: Overlay Installer Tests
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - name: Run unit tests
-        run: ./t/test_install.sh
+        run: make test-install
 
   shellcheck:
-    name: ShellCheck Lint
+    name: ShellCheck
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - name: Install shellcheck
         run: sudo apt-get install -y shellcheck
-      - name: Lint scripts
-        run: shellcheck tools/*.sh t/*.sh skills/*/scripts/*.sh
+      - name: Lint shell scripts
+        run: make shellcheck
+
+  perlcheck:
+    name: Perl Syntax Check
+    runs-on: ubuntu-latest
+    container:
+      image: perldocker/perl-tester:5.32
+    steps:
+      - uses: actions/checkout@v6
+      - name: Check Perl syntax
+        run: make perlcheck
 
   integration-tests:
     name: Multi-Tool Integration
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - name: Run integration tests
-        run: |
-          podman run --rm \
-            -v "${{ github.workspace }}:/src:ro" \
-            ghcr.io/mpagot/osado-gemini-tester:latest \
-            /src/t/test_integration.sh
+        run: make test-integration
