@@ -1,0 +1,366 @@
+# Semgrep custom rules for bash security auditing.
+# Targets vulnerabilities identified in the OSADO skill scripts security audit.
+#
+# Usage:
+#   uvx semgrep scan --config tools/semgrep-bash-security.yaml --include "*.sh" .
+#
+# These rules complement ShellCheck. They detect patterns that ShellCheck
+# does not flag or flags with insufficient severity.
+
+rules:
+  # ===========================================================================
+  # CRITICAL: Command Injection via eval
+  # ===========================================================================
+
+  - id: eval-variable-injection
+    languages: [bash]
+    severity: ERROR
+    message: >-
+      eval with variable argument allows command injection. If $X contains
+      data derived from file content (e.g., awk/sed output), an attacker
+      can inject arbitrary commands via $(cmd), `cmd`, or quote-breaking.
+      Replace with readarray + positional output from awk.
+    pattern: eval $X
+    metadata:
+      category: security
+      subcategory: [audit]
+      cwe:
+        - "CWE-95: Improper Neutralization of Directives in Dynamically Evaluated Code"
+      confidence: HIGH
+      impact: HIGH
+      likelihood: HIGH
+      references:
+        - "AGENTS.md Section 5: Prohibited Patterns"
+      fix: |
+        Replace eval with readarray:
+          readarray -t values < <(awk '...' "$file")
+          VAR1="${values[0]}"
+          VAR2="${values[1]}"
+
+  - id: eval-command-substitution
+    languages: [bash]
+    severity: ERROR
+    message: >-
+      eval of command substitution output is dangerous. The output of the
+      command is interpreted as shell code. If the command processes
+      untrusted input, this enables injection.
+    pattern-regex: 'eval\s+"\$\([^)]+\)"'
+    metadata:
+      category: security
+      cwe:
+        - "CWE-95: Improper Neutralization of Directives in Dynamically Evaluated Code"
+      confidence: HIGH
+      impact: HIGH
+
+  # Taint mode: track data from text-processing tools into eval
+  - id: awk-output-to-eval
+    languages: [bash]
+    severity: ERROR
+    message: >-
+      Data extracted by awk flows into eval. If awk processes untrusted
+      file content, the output may contain shell metacharacters that
+      execute as commands. Use readarray with line-per-value output instead.
+    mode: taint
+    pattern-sources:
+      - pattern: $X=$(awk $...ARGS)
+    pattern-sinks:
+      - pattern: eval $X
+      - pattern: eval "$X"
+    metadata:
+      category: security
+      cwe:
+        - "CWE-95: Improper Neutralization of Directives in Dynamically Evaluated Code"
+      confidence: HIGH
+      impact: HIGH
+
+  - id: sed-output-to-eval
+    languages: [bash]
+    severity: ERROR
+    message: >-
+      Data extracted by sed flows into eval. If sed processes untrusted
+      file content, the output may contain shell metacharacters.
+      Use readarray with line-per-value output instead.
+    mode: taint
+    pattern-sources:
+      - pattern: $X=$(sed $...ARGS)
+    pattern-sinks:
+      - pattern: eval $X
+      - pattern: eval "$X"
+    metadata:
+      category: security
+      cwe:
+        - "CWE-95: Improper Neutralization of Directives in Dynamically Evaluated Code"
+      confidence: HIGH
+      impact: HIGH
+
+  # ===========================================================================
+  # HIGH: source with dynamic/untrusted input
+  # ===========================================================================
+
+  - id: source-process-substitution
+    languages: [bash]
+    severity: ERROR
+    message: >-
+      source with process substitution executes dynamically generated code.
+      This is equivalent to eval and equally dangerous if the command
+      processes untrusted input.
+    pattern-regex: '(source|\.)(\s+)<\('
+    metadata:
+      category: security
+      cwe:
+        - "CWE-95: Improper Neutralization of Directives in Dynamically Evaluated Code"
+      confidence: HIGH
+      impact: HIGH
+
+  - id: source-variable
+    languages: [bash]
+    severity: WARNING
+    message: >-
+      source with a variable path could load untrusted code if the
+      variable is attacker-controlled. Ensure the path is validated.
+    pattern: source $X
+    metadata:
+      category: security
+      cwe:
+        - "CWE-829: Inclusion of Functionality from Untrusted Control Sphere"
+      confidence: MEDIUM
+      impact: HIGH
+
+  # ===========================================================================
+  # MEDIUM: Word Splitting / Unsafe Iteration
+  # ===========================================================================
+
+  # Semgrep bash parser cannot handle "for $F in $(...); do ... done"
+  # so we use pattern-regex for these.
+
+  - id: unsafe-find-for-loop
+    languages: [bash]
+    severity: WARNING
+    message: >-
+      Iterating over find output with a for loop causes word splitting on
+      filenames containing spaces, tabs, or glob characters. An attacker
+      can craft filenames that break iteration or target wrong files.
+      Use: find ... -print0 | while IFS= read -r -d '' file; do
+    pattern-regex: 'for\s+\w+\s+in\s+\$\(find\s'
+    metadata:
+      category: security
+      subcategory: [audit]
+      cwe:
+        - "CWE-78: Improper Neutralization of Special Elements used in an OS Command"
+      confidence: HIGH
+      impact: MEDIUM
+      fix: |
+        Replace with:
+          while IFS= read -r -d '' file; do
+              process "$file"
+          done < <(find "$dir" -name "*.ext" -print0 | sort -z)
+
+  - id: unquoted-variable-for-loop
+    languages: [bash]
+    severity: WARNING
+    message: >-
+      Unquoted variable in for loop undergoes word splitting and glob
+      expansion. If the variable contains filenames with spaces or glob
+      characters, iteration will break or match unintended files.
+      Use: while IFS= read -r line; do ... done <<< "$VAR"
+    pattern-regex: 'for\s+\w+\s+in\s+\$[A-Z_][A-Z_0-9]*\s*;'
+    metadata:
+      category: security
+      subcategory: [audit]
+      cwe:
+        - "CWE-78: Improper Neutralization of Special Elements used in an OS Command"
+      confidence: HIGH
+      impact: MEDIUM
+
+  # ===========================================================================
+  # MEDIUM: printf format string injection
+  # ===========================================================================
+
+  - id: printf-v-injection
+    languages: [bash]
+    severity: WARNING
+    message: >-
+      printf -v with untrusted format string can cause unexpected variable
+      assignment. Validate input before using in printf format position.
+    pattern-regex: 'printf\s+-v\s+\w+\s+"\$'
+    metadata:
+      category: security
+      cwe:
+        - "CWE-134: Use of Externally-Controlled Format String"
+      confidence: MEDIUM
+      impact: MEDIUM
+
+  # ===========================================================================
+  # MEDIUM: Remote Code Execution
+  # ===========================================================================
+
+  - id: curl-pipe-shell
+    languages: [bash]
+    severity: ERROR
+    message: >-
+      Piping remote content directly to a shell interpreter allows the
+      remote server to execute arbitrary commands on this machine.
+    pattern-either:
+      - pattern: curl $...ARGS | bash $...REST
+      - pattern: curl $...ARGS | sh $...REST
+      - pattern: wget $...ARGS | bash $...REST
+      - pattern: wget $...ARGS | sh $...REST
+    metadata:
+      category: security
+      cwe:
+        - "CWE-94: Improper Control of Generation of Code"
+      confidence: HIGH
+      impact: HIGH
+
+  - id: curl-eval
+    languages: [bash]
+    severity: ERROR
+    message: >-
+      eval of curl/wget output allows the remote server to execute
+      arbitrary commands in the current shell context.
+    pattern-either:
+      - pattern: eval $(curl $...ARGS)
+      - pattern: eval $(wget $...ARGS)
+    metadata:
+      category: security
+      cwe:
+        - "CWE-94: Improper Control of Generation of Code"
+      confidence: HIGH
+      impact: HIGH
+
+  # ===========================================================================
+  # LOW-MEDIUM: Destructive Commands
+  # ===========================================================================
+
+  - id: rm-rf-root
+    languages: [bash]
+    severity: ERROR
+    message: >-
+      Recursive forced deletion of root filesystem or /home. This will
+      destroy the entire system.
+    pattern-regex: 'rm\s+-(rf|fr)\s+/([\s;|&]|$|home)'
+    metadata:
+      category: security
+      cwe:
+        - "CWE-749: Exposed Dangerous Method or Function"
+      confidence: HIGH
+      impact: HIGH
+
+  - id: rm-rf-variable-unquoted
+    languages: [bash]
+    severity: WARNING
+    message: >-
+      rm -rf with unquoted variable. If the variable is empty or
+      unset, this could delete unintended paths (e.g., rm -rf /$EMPTY
+      becomes rm -rf /).
+    pattern-regex: 'rm\s+-(rf|fr)\s+[/$]\w*[^"\s]'
+    metadata:
+      category: security
+      cwe:
+        - "CWE-749: Exposed Dangerous Method or Function"
+      confidence: MEDIUM
+      impact: HIGH
+
+  - id: dd-to-block-device
+    languages: [bash]
+    severity: ERROR
+    message: "Writing directly to a block device will destroy its contents."
+    pattern-regex: 'dd\s+.*of=/dev/[shvx]d'
+    metadata:
+      category: security
+      cwe:
+        - "CWE-749: Exposed Dangerous Method or Function"
+      confidence: HIGH
+      impact: HIGH
+
+  - id: write-to-block-device
+    languages: [bash]
+    severity: ERROR
+    message: "Redirecting output to a block device will destroy its contents."
+    pattern-regex: '>\s*/dev/[shvx]d'
+    metadata:
+      category: security
+      cwe:
+        - "CWE-749: Exposed Dangerous Method or Function"
+      confidence: HIGH
+      impact: HIGH
+
+  # ===========================================================================
+  # LOW-MEDIUM: Fork Bombs
+  # ===========================================================================
+
+  - id: fork-bomb
+    languages: [bash]
+    severity: ERROR
+    message: "Potential fork bomb detected — exponential process creation."
+    pattern-regex: ':\(\)\s*\{.*\|.*&\s*\}\s*;?\s*:'
+    metadata:
+      category: security
+      cwe:
+        - "CWE-400: Uncontrolled Resource Consumption"
+      confidence: HIGH
+      impact: HIGH
+
+  # ===========================================================================
+  # INFO: Defense-in-Depth / Output Sanitization
+  # ===========================================================================
+
+  - id: unsanitized-file-content-to-stdout
+    languages: [bash]
+    severity: INFO
+    message: >-
+      File-derived content is echoed to stdout without format validation.
+      If a downstream consumer (e.g., an LLM agent) interpolates this
+      output into another command, it could enable transitive injection.
+      Consider validating the format before outputting.
+    mode: taint
+    pattern-sources:
+      - pattern: $X=$(grep $...ARGS)
+      - pattern: $X=$(sed $...ARGS)
+      - pattern: $X=$(awk $...ARGS)
+      - pattern: $X=$(cat $...ARGS)
+    pattern-sinks:
+      - pattern: echo $X
+      - pattern: echo "$X"
+      - pattern: printf $...FMT $X
+    metadata:
+      category: security
+      subcategory: [audit]
+      cwe:
+        - "CWE-116: Improper Encoding or Escaping of Output"
+      confidence: LOW
+      impact: MEDIUM
+      note: >-
+        This is a defense-in-depth finding. The echo itself is safe,
+        but the propagation of unsanitized data to external consumers
+        (LLM agents, other scripts) may enable transitive attacks.
+
+  # ===========================================================================
+  # INFO: Permissions
+  # ===========================================================================
+
+  - id: chmod-world-writable
+    languages: [bash]
+    severity: WARNING
+    message: "Setting world-writable permissions creates a security risk."
+    pattern-regex: 'chmod\s+(777|666|o\+w)'
+    metadata:
+      category: security
+      cwe:
+        - "CWE-732: Incorrect Permission Assignment for Critical Resource"
+      confidence: HIGH
+      impact: MEDIUM
+
+  - id: unsafe-temp-file
+    languages: [bash]
+    severity: WARNING
+    message: >-
+      Hardcoded /tmp path without mktemp is vulnerable to symlink
+      attacks (TOCTOU race). Use: tmpfile=$(mktemp)
+    pattern-regex: '(?<!mktemp\s)(/tmp/[a-zA-Z0-9_.-]+)'
+    metadata:
+      category: security
+      cwe:
+        - "CWE-377: Insecure Temporary File"
+      confidence: MEDIUM
+      impact: MEDIUM

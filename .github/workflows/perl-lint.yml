@@ -1,0 +1,24 @@
+name: Perl Lint
+
+on:
+  push:
+    branches: [main, master]
+    paths:
+      - '**.pl'
+      - 'Makefile'
+  pull_request:
+    branches: [main, master]
+    paths:
+      - '**.pl'
+      - 'Makefile'
+
+jobs:
+  perlcheck:
+    name: Perl Syntax Check
+    runs-on: ubuntu-latest
+    container:
+      image: perldocker/perl-tester:5.32
+    steps:
+      - uses: actions/checkout@v6
+      - name: Check Perl syntax
+        run: make perlcheck
