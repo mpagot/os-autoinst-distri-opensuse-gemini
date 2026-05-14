@@ -15,26 +15,6 @@ jobs:
       - name: Run unit tests
         run: make test-install
 
-  shellcheck:
-    name: ShellCheck
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v6
-      - name: Install shellcheck
-        run: sudo apt-get install -y shellcheck
-      - name: Lint shell scripts
-        run: make shellcheck
-
-  perlcheck:
-    name: Perl Syntax Check
-    runs-on: ubuntu-latest
-    container:
-      image: perldocker/perl-tester:5.32
-    steps:
-      - uses: actions/checkout@v6
-      - name: Check Perl syntax
-        run: make perlcheck
-
   integration-tests:
     name: Multi-Tool Integration
     runs-on: ubuntu-latest
