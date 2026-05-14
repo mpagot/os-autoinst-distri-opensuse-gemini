@@ -2,7 +2,7 @@
 # SPDX-License-Identifier: GPL-2.0-or-later
 
 # Summary: [Short Summary of the Module]
-# Maintainer: QE-SAP <qe-sap@suse.de>
+# Maintainer: [MAINTAINER]
 
 =head1 NAME
 
@@ -29,6 +29,6 @@ Its primary tasks are:
 
 =head1 MAINTAINER
 
-QE-SAP <qe-sap@suse.de>
+[MAINTAINER]
 
 =cut

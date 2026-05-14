@@ -81,7 +81,7 @@ For a complete list of use cases and detailed explanations, see
 |-------|-------------|
 | `perl-test-compile` | Compile-check Perl files with correct OSADO `PERL5LIB` |
 | `vr-planner` | Plan verification runs for code changes |
-| `sles4sap-catalog` | Add/audit Perldoc headers on SLES4SAP test modules |
+| `test-catalog` | Add/audit Perldoc documentation headers on test modules |
 | `openqa-log-analyzer` | Parse and extract sections from `autoinst-log.txt` |
 
 ## Dependencies
@@ -194,7 +194,7 @@ cp /path/to/os-autoinst-distri-opensuse-gemini/OSADO_AGENTS.md ./AGENTS.md
 ├── skills/                  # Agent skills (SKILL.md + scripts)
 │   ├── perl-test-compile/
 │   ├── vr-planner/
-│   ├── sles4sap-catalog/
+│   ├── test-catalog/
 │   └── openqa-log-analyzer/
 ├── commands/                # Custom commands (Gemini CLI only, TOML)
 │   └── osado/

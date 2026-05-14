@@ -177,11 +177,11 @@ setup_fake_osado
 assert_is_link "$FAKE_OSADO/.gemini/skills/openqa-log-analyzer/scripts/extract_log_section.pl" \
     "$REPO_ROOT/skills/openqa-log-analyzer/scripts/extract_log_section.pl"
 
-# sles4sap-catalog has scripts/ and assets/
-assert_is_link "$FAKE_OSADO/.gemini/skills/sles4sap-catalog/scripts/audit.sh" \
-    "$REPO_ROOT/skills/sles4sap-catalog/scripts/audit.sh"
-assert_is_link "$FAKE_OSADO/.gemini/skills/sles4sap-catalog/assets/template.md" \
-    "$REPO_ROOT/skills/sles4sap-catalog/assets/template.md"
+# test-catalog has scripts/ and assets/
+assert_is_link "$FAKE_OSADO/.gemini/skills/test-catalog/scripts/audit.sh" \
+    "$REPO_ROOT/skills/test-catalog/scripts/audit.sh"
+assert_is_link "$FAKE_OSADO/.gemini/skills/test-catalog/assets/template.md" \
+    "$REPO_ROOT/skills/test-catalog/assets/template.md"
 
 # vr-planner has multiple scripts
 assert_is_link "$FAKE_OSADO/.gemini/skills/vr-planner/scripts/classify_changes.pl" \

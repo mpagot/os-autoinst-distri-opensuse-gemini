@@ -19,7 +19,7 @@ For a quick visual overview, see the
 | "Was this timeout caused by a slow worker host?" | `openqa-log-analyzer` |
 | "Which command in the log took the longest?" | `openqa-log-analyzer` |
 | "Does my edited `.pm` file compile?" | `perl-test-compile` |
-| "Add a Perldoc header to this SLES4SAP test module" | `sles4sap-catalog` |
+| "Add a Perldoc header to this test module" | `test-catalog` |
 | "Commit my staged changes and open a PR" | `/github_pr_create` |
 
 ## 1. Planning Verification Runs -- `vr-planner`
@@ -148,11 +148,11 @@ files or directories you specify.
   the skill serves as a quick sanity check. If `perl -c` fails, the error is
   read, the fix is applied, and the check is re-run automatically.
 
-## 4. Documenting SLES4SAP Test Modules -- `sles4sap-catalog`
+## 4. Documenting Test Modules -- `test-catalog`
 
-The `sles4sap-catalog` skill automates the creation and auditing of
-standardised Perldoc headers for SLES4SAP test modules, supporting the test
-catalog documentation initiative.
+The `test-catalog` skill automates the creation and auditing of
+standardised Perldoc headers for OSADO test modules, supporting the test
+catalog documentation standard.
 
 The workflow is template-driven: the skill reads the target Perl file,
 understands its purpose, identifies openQA variables (`get_var`,
@@ -163,17 +163,18 @@ runs the `audit.sh` script plus standard project checks (`tools/check_metadata`,
 
 ### Practical situations
 
-- **Adding a header to a new test module:** You wrote a new SLES4SAP test.
+- **Adding a header to a new test module:** You wrote a new test module.
   The skill generates a complete Perldoc header including NAME, DESCRIPTION,
   SETTINGS (with all detected openQA variables and their defaults), and
-  MAINTAINER sections.
+  MAINTAINER sections. The maintainer is auto-detected from existing file
+  content or a directory-based lookup table.
 
 - **Auditing an existing header:** A module has a partial or outdated header.
   The skill replaces it with a correct one and runs the full audit pipeline to
   confirm compliance.
 
 - **Batch documentation effort:** When working through a backlog of
-  undocumented SLES4SAP modules, this skill provides a repeatable, consistent
+  undocumented modules, this skill provides a repeatable, consistent
   workflow for each file -- analyse, generate, audit, fix, re-audit.
 
 ### Generated header sections
@@ -183,7 +184,7 @@ runs the `audit.sh` script plus standard project checks (`tools/check_metadata`,
 | `NAME` | `directory/filename.pm - Short description` |
 | `DESCRIPTION` | Detailed explanation with bullet-point tasks |
 | `SETTINGS` | All openQA variables with descriptions and defaults |
-| `MAINTAINER` | `QE-SAP <qe-sap@suse.de>` |
+| `MAINTAINER` | Auto-detected from file/directory or provided by user |
 
 ## 5. Creating Pull Requests -- `/github_pr_create`
 
@@ -239,7 +240,7 @@ cycle:
   analyse logs ───────────── openqa-log-analyzer
       │
       ▼
-  document module ────────── sles4sap-catalog
+  document module ────────── test-catalog
       │
       ▼
   create PR ──────────────── /github_pr_create

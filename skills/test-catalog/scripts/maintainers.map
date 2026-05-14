@@ -1,0 +1,12 @@
+# Directory prefix to Maintainer mapping
+# Format: <path_prefix>:<Maintainer Name <email>>
+# Longest prefix match wins.
+# Lines starting with # are comments. Empty lines are ignored.
+#
+# Add new entries as needed. The path prefix should match the beginning
+# of the file path as passed to maintainer-detect.sh.
+tests/sles4sap/:QE-SAP <qe-sap@suse.de>
+tests/ha/:QE-SAP <qe-sap@suse.de>
+tests/publiccloud/:QE-C team <qa-c@suse.de>
+tests/installation/:QE YaST and Migration (QE Yam) <qe-yam@suse.de>
+tests/autoyast/:QE YaST and Migration (QE Yam) <qe-yam@suse.de>

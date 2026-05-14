@@ -36,7 +36,7 @@ OSADO_DIR="/osado"
 EXPECTED_SKILLS=(
     "perl-test-compile"
     "vr-planner"
-    "sles4sap-catalog"
+    "test-catalog"
     "openqa-log-analyzer"
 )
 
