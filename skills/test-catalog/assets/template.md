@@ -14,8 +14,13 @@
 
 Its primary tasks are:
 
-- [Task 1]
-- [Task 2]
+=over
+
+=item * [Task 1]
+
+=item * [Task 2]
+
+=back
 
 =head1 SETTINGS
 

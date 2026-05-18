@@ -34,7 +34,7 @@ export PERL5LIB=".:lib:os-autoinst:os-autoinst/lib:$PERL5LIB"
     ```bash
     make test-compile-changed
     ```
-    Alternatively, use the helper script: `.gemini/skills/test_compile.sh <file>`
+    Alternatively, use the helper script: `.gemini/skills/local-lint-test/scripts/test_compile.sh <file>`
 *   **Run static analysis (YAML, metadata, etc.):**
     ```bash
     make test-static

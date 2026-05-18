@@ -33,14 +33,23 @@ AI:  Running health check on autoinst-log.txt... 1 timeout detected in hana_inst
      Recommend: re-run the job on a different worker.
 ```
 
-### ✅ Quick syntax check after editing Perl
+### ✅ Run the right checks before pushing
 
 ```
-You: Does tests/sles4sap/hana_install.pm still compile?
+You: I edited lib/sles4sap/azure_cli.pm and schedule/sles4sap/hana_node.yaml
+     -- what should I run locally?
 
-AI:  Running perl -c with PERL5LIB=.:lib:os-autoinst:os-autoinst/lib ...
-     tests/sles4sap/hana_install.pm ... PASS
-     All 1 file(s) passed compilation.
+AI:  Analysing 2 changed files...
+
+     TIER 1 (instant):
+       perl -c lib/sles4sap/azure_cli.pm ... PASS
+       yamllint schedule/sles4sap/hana_node.yaml ... PASS
+
+     TIER 2 (before commit):
+       prove -lv -Ios-autoinst/ t/sles4sap/azure_cli.t ... 12 tests passed
+       make tidy ... no changes needed
+
+     All local checks passed. Ready to push.
 ```
 
 ### 📝 Generate Perldoc headers for the test catalog
@@ -79,8 +88,8 @@ For a complete list of use cases and detailed explanations, see
 
 | Skill | Description |
 |-------|-------------|
-| `perl-test-compile` | Compile-check Perl files with correct OSADO `PERL5LIB` |
-| `vr-planner` | Plan verification runs for code changes |
+| `local-lint-test` | Answers: *"What's the fastest local command to validate my edit right now?"* |
+| `vr-planner` | Answers: *"What remote openQA jobs should I clone to verify my change?"* |
 | `test-catalog` | Add/audit Perldoc documentation headers on test modules |
 | `openqa-log-analyzer` | Parse and extract sections from `autoinst-log.txt` |
 
@@ -192,7 +201,7 @@ cp /path/to/os-autoinst-distri-opensuse-gemini/OSADO_AGENTS.md ./AGENTS.md
 ├── gemini-extension.json    # Extension manifest (for native Gemini install)
 ├── OSADO_AGENTS.md          # Agent guidelines deployed to OSADO (context + workflow)
 ├── skills/                  # Agent skills (SKILL.md + scripts)
-│   ├── perl-test-compile/
+│   ├── local-lint-test/
 │   ├── vr-planner/
 │   ├── test-catalog/
 │   └── openqa-log-analyzer/

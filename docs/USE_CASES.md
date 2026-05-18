@@ -18,7 +18,9 @@ For a quick visual overview, see the
 | "I have `autoinst-log.txt` from a failed job -- what happened?" | `openqa-log-analyzer` |
 | "Was this timeout caused by a slow worker host?" | `openqa-log-analyzer` |
 | "Which command in the log took the longest?" | `openqa-log-analyzer` |
-| "Does my edited `.pm` file compile?" | `perl-test-compile` |
+| "Does my edited `.pm` file compile?" | `local-lint-test` |
+| "What's the fastest check for my change?" | `local-lint-test` |
+| "How do I run a single unit test?" | `local-lint-test` |
 | "Add a Perldoc header to this test module" | `test-catalog` |
 | "Commit my staged changes and open a PR" | `/github_pr_create` |
 
@@ -127,26 +129,49 @@ options, and usage examples, see the
   failed, extract just that module's log section for focused reading instead of
   scrolling through the full log.
 
-## 3. Syntax Checking Perl Files -- `perl-test-compile`
+## 3. Local Validation -- `local-lint-test`
 
-The `perl-test-compile` skill provides a fast, targeted `perl -c` syntax check
-that uses the correct OSADO `PERL5LIB` (`.:lib:os-autoinst:os-autoinst/lib`).
-It is faster than a full `make test-compile` because it scopes to exactly the
-files or directories you specify.
+The `local-lint-test` skill answers: **"What's the fastest local command to
+validate my edit right now?"**
+
+Where `vr-planner` answers *"What remote openQA jobs should I clone?"*, this
+skill covers everything you can check **locally** without network access:
+compilation, formatting, linting, unit tests, YAML validation, and static
+analysis. It always recommends the lightest targeted command over a full-suite
+run.
+
+The skill operates in three tiers:
+
+1. **Instant** -- per-file checks that complete in seconds (`perl -c`,
+   `yamllint`, `prove` on a single unit test). Run these after every edit.
+2. **Quick** -- checks that take under 30 seconds (`make tidy`, batch
+   compile). Run before committing.
+3. **Thorough** -- full-suite checks that take minutes (`make perlcritic`,
+   `make test TESTS=static`). Run before opening a PR.
 
 ### Practical situations
 
-- **Immediate feedback after editing a file:** Run the script on just the
-  `.pm` or `.pl` file(s) you touched to catch syntax errors before committing.
-  Much faster than running `make test-compile` across the entire codebase.
+- **Immediate feedback after editing a file:** The skill identifies the file
+  type and suggests the single fastest check -- `perl -c` for Perl, `yamllint`
+  for YAML schedules, jsonnet validation for data templates.
 
-- **Checking a whole directory after a refactor:** When refactoring across a
-  module family (e.g., all of `lib/sles4sap/`), pass the directory to
-  recursively check every Perl file under it.
+- **Finding the right unit test:** When you edit `lib/foo/bar.pm`, the skill
+  locates the matching `t/*bar*.t` file and outputs the exact `prove` command
+  with all include paths pre-filled.
 
-- **Post-edit verification gate:** After the AI assistant modifies Perl code,
-  the skill serves as a quick sanity check. If `perl -c` fails, the error is
-  read, the fix is applied, and the check is re-run automatically.
+- **Before committing:** Recommends `make tidy` for formatting and the
+  specific unit test(s) that cover your change -- not the full test suite.
+
+- **Before opening a PR:** Suggests the thorough checks (`make perlcritic`,
+  `make test TESTS=static`) that CI will also run, so you catch issues early.
+
+- **Triaging a local check failure:** When `make tidy` fails with a perltidy
+  version mismatch, or `perlcritic` reports a missing policy, the skill
+  explains the root cause and provides the fix command.
+
+- **Running in isolation with verbose output:** Instead of memorising flags
+  and `PERL5LIB` paths, the skill outputs complete copy-paste commands like
+  `PERL5OPT=-MCarp::Always prove -lv -Ios-autoinst/ t/sles4sap/azure_cli.t`.
 
 ## 4. Documenting Test Modules -- `test-catalog`
 
@@ -228,7 +253,7 @@ cycle:
   edit code
       │
       ▼
-  verify syntax ──────────── perl-test-compile
+  validate locally ─────────── local-lint-test
       │
       ▼
   plan verification run ──── vr-planner
