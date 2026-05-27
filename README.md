@@ -92,6 +92,8 @@ For a complete list of use cases and detailed explanations, see
 | `vr-planner` | Answers: *"What remote openQA jobs should I clone to verify my change?"* |
 | `test-catalog` | Add/audit Perldoc documentation headers on test modules |
 | `openqa-log-analyzer` | Parse and extract sections from `autoinst-log.txt` |
+| `git-commit` | Write OSADO-compliant commit messages for staged changes |
+| `github-pr-create` | End-to-end workflow: commit, push, and create PR upstream |
 
 ## Dependencies
 
@@ -127,7 +129,33 @@ gemini extensions update osado-ai-assistant
 gemini extensions uninstall osado-ai-assistant
 ```
 
-### Option B: Manual Overlay (Legacy)
+### Option B: Claude Code Plugin
+
+Install as a native Claude Code plugin via the marketplace system.
+
+```bash
+# Subscribe to the marketplace (one-time)
+claude plugin marketplace add mpagot/os-autoinst-distri-opensuse-gemini
+```
+
+Then in a Claude Code session:
+
+```
+/plugin install osado-ai-assistant@openqa-tools
+```
+
+Skills become available as `osado-ai-assistant:local-lint-test`,
+`osado-ai-assistant:vr-planner`, etc.
+
+**Note:** Claude Code plugins don't inject per-turn project context like
+Gemini CLI extensions do. For full OSADO guidelines in every interaction,
+add this to your project's `CLAUDE.md`:
+
+```markdown
+@OSADO_AGENTS.md
+```
+
+### Option C: Manual Overlay (Legacy)
 
 Symlinks skills and commands into your OSADO clone's `.gemini/` directory.
 This method is deprecated in favor of the native extension install above.
@@ -153,7 +181,7 @@ For cross-tool compatibility (also links into `.agents/skills/` and `AGENTS.md`)
 ./tools/install.sh --portable /path/to/your/os-autoinst-distri-opensuse
 ```
 
-### Option C: Other AI Coding Tools
+### Option D: Other AI Coding Tools
 
 The skills in this repository follow the
 [Agent Skills open standard](https://agentskills.io) (`SKILL.md` format) and
@@ -199,12 +227,17 @@ cp /path/to/os-autoinst-distri-opensuse-gemini/OSADO_AGENTS.md ./AGENTS.md
 ```
 .
 ├── gemini-extension.json    # Extension manifest (for native Gemini install)
+├── .claude-plugin/          # Plugin manifest (for native Claude Code install)
+│   ├── plugin.json
+│   └── marketplace.json
 ├── OSADO_AGENTS.md          # Agent guidelines deployed to OSADO (context + workflow)
 ├── skills/                  # Agent skills (SKILL.md + scripts)
 │   ├── local-lint-test/
 │   ├── vr-planner/
 │   ├── test-catalog/
-│   └── openqa-log-analyzer/
+│   ├── openqa-log-analyzer/
+│   ├── git-commit/
+│   └── github-pr-create/
 ├── commands/                # Custom commands (Gemini CLI only, TOML)
 │   └── osado/
 │       ├── git_commit.toml
@@ -236,6 +269,7 @@ Gemini CLI session.
 - [Gemini CLI Skills](https://geminicli.com/docs/cli/skills/)
 - [Gemini CLI Custom Commands](https://geminicli.com/docs/cli/custom-commands/)
 - [Gemini CLI Extensions](https://geminicli.com/docs/extensions/)
+- [Claude Code Plugin Marketplaces](https://code.claude.com/docs/en/plugin-marketplaces)
 
 ### Testing
 

@@ -60,17 +60,20 @@ This repository supports multiple installation strategies:
 
 | Method | For whom | Mechanism |
 |--------|----------|-----------|
-| `gemini extensions install` | End users (Gemini CLI) | Native extension |
-| `tools/install.sh` | End users (legacy) | Symlink overlay |
+| `gemini extensions install` | Gemini CLI users | Native extension |
+| `claude plugin marketplace add` | Claude Code users | Native plugin |
+| `tools/install.sh` | Legacy users | Symlink overlay |
 | `gemini extensions link .` | Developers of this repo | Local dev testing |
 | Manual copy to `.agents/skills/` | OpenCode/Pi Agent users | File-based |
-| Manual copy to `.claude/skills/` | Claude Code users | File-based |
+| Manual copy to `.claude/skills/` | Claude Code users (alt) | File-based |
 
 ### Key Files
 
 | File | Purpose |
 |------|---------|
 | `gemini-extension.json` | Extension manifest (Gemini CLI) |
+| `.claude-plugin/plugin.json` | Plugin manifest (Claude Code) |
+| `.claude-plugin/marketplace.json` | Marketplace manifest (Claude Code) |
 | `GEMINI.md` | Agent context loaded by Gemini CLI |
 | `OSADO_AGENTS.md` | Agent guidelines deployed to OSADO repos |
 | `skills/` | Agent skills (`SKILL.md` + `scripts/`) |

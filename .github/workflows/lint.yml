@@ -1,0 +1,33 @@
+name: Lint & Validate
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  lint:
+    name: Shell + Semgrep + Manifests + Skills
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - name: Install shellcheck
+        run: sudo apt-get install -y shellcheck
+      - name: Install uv (for semgrep)
+        uses: astral-sh/setup-uv@v4
+      - name: Run shell lint, semgrep, and manifest/skill validation
+        run: make shellcheck semgrep gemini-check claude-plugincheck skillcheck
+
+  perl-lint:
+    name: Perl Syntax Check
+    runs-on: ubuntu-latest
+    container:
+      image: perldocker/perl-tester:5.32
+    steps:
+      - uses: actions/checkout@v6
+      - name: Check Perl syntax
+        run: make perlcheck

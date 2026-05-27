@@ -38,6 +38,8 @@ EXPECTED_SKILLS=(
     "vr-planner"
     "test-catalog"
     "openqa-log-analyzer"
+    "git-commit"
+    "github-pr-create"
 )
 
 # Expected commands
@@ -105,6 +107,8 @@ log_section "TEST 1: Source Repository Structure"
 
 assert_file_exists "$SRC_DIR/gemini-extension.json" "Extension manifest exists"
 assert_file_exists "$SRC_DIR/OSADO_AGENTS.md" "Context file exists"
+assert_file_exists "$SRC_DIR/.claude-plugin/plugin.json" "Claude Code plugin manifest exists"
+assert_file_exists "$SRC_DIR/.claude-plugin/marketplace.json" "Claude Code marketplace manifest exists"
 
 for skill in "${EXPECTED_SKILLS[@]}"; do
     assert_file_exists "$SRC_DIR/skills/$skill/SKILL.md" "Skill SKILL.md"
@@ -257,10 +261,16 @@ if has_command claude; then
             "Claude Code: .claude/skills/$skill/SKILL.md"
     done
 
-    # Try to list skills if claude supports it
-    # Note: Claude Code may not have a non-interactive skill list command
     log_info "Claude Code installed. Skills copied to .claude/skills/."
     log_pass "Claude Code: skill files placed correctly"
+
+    # Validate the plugin manifest against Claude Code's schema
+    validate_output=$(claude plugin validate "$SRC_DIR" 2>&1) && validate_rc=0 || validate_rc=$?
+    if [[ $validate_rc -eq 0 ]]; then
+        log_pass "claude plugin validate: $SRC_DIR"
+    else
+        log_fail "claude plugin validate failed (rc=$validate_rc): $validate_output"
+    fi
 else
     # Still verify the file structure would work
     mkdir -p "$OSADO_DIR/.claude/skills"
@@ -369,6 +379,69 @@ if [[ "$ext_name" =~ ^[a-z][a-z0-9-]*[a-z0-9]$ ]]; then
     log_pass "Extension name is valid kebab-case: $ext_name"
 else
     log_fail "Extension name is not valid kebab-case: $ext_name"
+fi
+
+# =============================================================================
+# TEST 10: Claude Code Marketplace Install Cycle
+# =============================================================================
+log_section "TEST 10: Claude Code Marketplace Install Cycle"
+
+if has_command claude; then
+    marketplace_name="openqa-tools"
+    plugin_name="osado-ai-assistant"
+    plugin_ref="$plugin_name@$marketplace_name"
+
+    # Ensure a clean slate: best-effort cleanup if a previous run left state behind
+    claude plugin uninstall "$plugin_ref" >/dev/null 2>&1 || true
+    claude plugin marketplace remove "$marketplace_name" >/dev/null 2>&1 || true
+
+    # Add the local repo as a marketplace source
+    add_output=$(claude plugin marketplace add "$SRC_DIR" --scope user 2>&1) && add_rc=0 || add_rc=$?
+    if [[ $add_rc -eq 0 ]]; then
+        log_pass "claude plugin marketplace add: $SRC_DIR"
+    else
+        log_fail "claude plugin marketplace add failed (rc=$add_rc): $add_output"
+    fi
+
+    # The marketplace should now appear in the list under its declared name
+    if claude plugin marketplace list 2>&1 | grep -q "$marketplace_name"; then
+        log_pass "claude plugin marketplace list contains '$marketplace_name'"
+    else
+        log_fail "claude plugin marketplace list missing '$marketplace_name'"
+    fi
+
+    # Install the plugin from the freshly registered marketplace
+    install_output=$(claude plugin install "$plugin_ref" 2>&1) && install_rc=0 || install_rc=$?
+    if [[ $install_rc -eq 0 ]]; then
+        log_pass "claude plugin install: $plugin_ref"
+    else
+        log_fail "claude plugin install failed (rc=$install_rc): $install_output"
+    fi
+
+    # The plugin should now appear in the installed plugin list
+    if claude plugin list 2>&1 | grep -q "$plugin_name"; then
+        log_pass "claude plugin list contains '$plugin_name'"
+    else
+        log_fail "claude plugin list missing '$plugin_name'"
+    fi
+
+    # Uninstall the plugin before removing the marketplace
+    uninstall_output=$(claude plugin uninstall "$plugin_ref" 2>&1) && uninstall_rc=0 || uninstall_rc=$?
+    if [[ $uninstall_rc -eq 0 ]]; then
+        log_pass "claude plugin uninstall: $plugin_ref"
+    else
+        log_fail "claude plugin uninstall failed (rc=$uninstall_rc): $uninstall_output"
+    fi
+
+    # Cleanup: remove the marketplace regardless of prior outcomes
+    remove_output=$(claude plugin marketplace remove "$marketplace_name" 2>&1) && remove_rc=0 || remove_rc=$?
+    if [[ $remove_rc -eq 0 ]]; then
+        log_pass "claude plugin marketplace remove: $marketplace_name"
+    else
+        log_fail "claude plugin marketplace remove failed (rc=$remove_rc): $remove_output"
+    fi
+else
+    log_skip "Claude Code not installed: skipping marketplace install cycle"
 fi
 
 # =============================================================================

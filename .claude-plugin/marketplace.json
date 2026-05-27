@@ -1,0 +1,12 @@
+{
+  "name": "openqa-tools",
+  "owner": { "name": "OSADO Team" },
+  "description": "AI developer productivity tools for os-autoinst-distri-opensuse",
+  "plugins": [
+    {
+      "name": "osado-ai-assistant",
+      "source": "./",
+      "description": "Developer productivity skills for openQA/openSUSE work"
+    }
+  ]
+}
