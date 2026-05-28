@@ -64,6 +64,19 @@ AI:  Reading file... identified 3 openQA variables (ANSIBLE_PLAYBOOK, PUBLIC_CLO
      Metadata check... OK. POD whitespace... OK.
 ```
 
+### 🧪 Scaffold or review a unit test
+
+```
+You: I added a new function az_disk_create to lib/sles4sap/azure_cli.pm.
+     Generate a unit test for it.
+
+AI:  Scanning az_disk_create... 3 mandatory args (resource_group, name, size_gb),
+     1 optional (sku). Generating test skeleton with @calls capture pattern,
+     dies_ok for mandatory args, and separate subtest for the optional arg.
+     Written to t/21_sles4sap_azure_cli.t (appended 3 new subtests).
+     Run: prove -lv -Ios-autoinst/ t/21_sles4sap_azure_cli.t
+```
+
 ### 🚀 Commit and open a PR in one shot
 
 ```
@@ -94,6 +107,7 @@ For a complete list of use cases and detailed explanations, see
 | `openqa-log-analyzer` | Parse and extract sections from `autoinst-log.txt` |
 | `git-commit` | Write OSADO-compliant commit messages for staged changes |
 | `github-pr-create` | End-to-end workflow: commit, push, and create PR upstream |
+| `unit-test-wizard` | Write and review unit tests for OSADO Perl library modules |
 
 ## Dependencies
 
@@ -237,7 +251,8 @@ cp /path/to/os-autoinst-distri-opensuse-gemini/OSADO_AGENTS.md ./AGENTS.md
 │   ├── test-catalog/
 │   ├── openqa-log-analyzer/
 │   ├── git-commit/
-│   └── github-pr-create/
+│   ├── github-pr-create/
+│   └── unit-test-wizard/
 ├── commands/                # Custom commands (Gemini CLI only, TOML)
 │   └── osado/
 │       ├── git_commit.toml
