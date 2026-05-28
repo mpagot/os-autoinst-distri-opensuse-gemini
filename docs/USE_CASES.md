@@ -22,6 +22,8 @@ For a quick visual overview, see the
 | "What's the fastest check for my change?" | `local-lint-test` |
 | "How do I run a single unit test?" | `local-lint-test` |
 | "Add a Perldoc header to this test module" | `test-catalog` |
+| "Generate a unit test for this new function" | `unit-test-wizard` (generate) |
+| "Review my test file against best practices" | `unit-test-wizard` (review) |
 | "Commit my staged changes and open a PR" | `/github_pr_create` |
 
 ## 1. Planning Verification Runs -- `vr-planner`
@@ -244,6 +246,71 @@ The command follows a six-step process:
   interacts with the AI to finalize the commit message and PR description,
   without switching between editor, terminal, and the GitHub web UI.
 
+## 6. Generating Unit Tests -- `unit-test-wizard` (generate mode)
+
+The `unit-test-wizard` skill in generate mode answers: **"I added a new
+function to a library module -- write a unit test for it."**
+
+It analyses the `.pm` file, identifies function signatures, mandatory
+arguments (from `croak` patterns), optional arguments (from `//=` defaults),
+and which testapi functions are called internally. From this analysis it
+produces a complete `.t` test skeleton following the `@calls` capture pattern.
+
+### Practical situations
+
+- **Writing a test for a new function:** You just added `az_disk_create` to
+  `lib/sles4sap/azure_cli.pm`. The skill scans the function signature,
+  generates a `[az_disk_create] missing arguments` subtest with one `dies_ok`
+  per mandatory arg, a base-case subtest verifying command composition via
+  `@calls`, and separate subtests for each optional argument.
+
+- **Bootstrapping a test file for a new module:** You created a brand-new
+  `lib/sles4sap/gcp_cli.pm` with 5 functions. The skill generates the entire
+  `.t` file -- boilerplate imports, one subtest group per function -- and
+  suggests the next available `t/NN_` filename.
+
+- **Filling in test gaps for existing code:** A library module exists but has
+  no unit test at all. The skill reads all exported subs and produces a
+  comprehensive skeleton covering mandatory args, default values, and the
+  happy-path command assertion for each function.
+
+- **Getting the mocking right:** You're unsure whether to mock
+  `assert_script_run`, `script_output`, or both. The skill inspects which
+  testapi functions the library actually calls and generates only the mocks
+  that are needed.
+
+## 7. Reviewing Unit Tests -- `unit-test-wizard` (review mode)
+
+The `unit-test-wizard` skill in review mode answers: **"Does my test file
+follow the project's established patterns?"**
+
+It runs a 14-point automated audit against the test file, checking structure,
+imports, mock usage, naming conventions, and cleanup hygiene. The check is
+library-aware: it reads the corresponding `.pm` file to avoid false positives
+(e.g., it only warns about a missing `record_info` mock if the tested function
+actually calls `record_info`).
+
+### Practical situations
+
+- **Pre-push quality check:** Before pushing a new or modified test file, run
+  the review to catch common issues: missing `no_auto => 1`, shared `@calls`
+  outside subtests, forgotten `set_var` cleanup, or use of `$mock->mock()`
+  instead of `redefine()`.
+
+- **Onboarding to the testing style:** A developer new to the project wrote
+  a test using their own conventions. The review identifies each deviation
+  from the established patterns and explains the expected idiom -- acting as
+  an automated code review.
+
+- **Catching subtle issues in existing tests:** Run the review against an
+  existing test file to find latent problems like generic fake values
+  (`"foo"`, `"bar"`), missing `Test::Mock::Time` import, or subtests named
+  without the `[function_name]` bracket convention.
+
+- **Verifying fixes:** After addressing review findings, re-run the audit to
+  confirm all 14 checks now pass. The `--json` flag produces structured output
+  for integration with other tooling.
+
 ## The Development Loop
 
 The skills and commands in this extension cover the full OSADO development
@@ -253,7 +320,13 @@ cycle:
   edit code
       │
       ▼
+  write unit tests ────────── unit-test-wizard (generate)
+      │
+      ▼
   validate locally ─────────── local-lint-test
+      │
+      ▼
+  review test quality ──────── unit-test-wizard (review)
       │
       ▼
   plan verification run ──── vr-planner
