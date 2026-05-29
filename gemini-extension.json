@@ -1,6 +1,6 @@
 {
   "name": "osado-ai-assistant",
-  "version": "0.5.0",
+  "version": "0.6.0",
   "description": "OSADO developer productivity skills and commands for openQA/openSUSE work (os-autoinst-distri-opensuse).",
   "contextFileName": "OSADO_AGENTS.md"
 }

@@ -5,6 +5,9 @@ fake_osado/
 node_modules/
 dist/
 
+# OpenCode project-local config (dev-only, see README for setup)
+.opencode/
+
 # Editor files
 *.swp
 *.swo
