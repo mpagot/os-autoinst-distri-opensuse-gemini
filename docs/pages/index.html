@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>OSADO AI Assistant</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+           background: #fff; color: #222; line-height: 1.6; padding: 2rem 1rem; }
+    .container { max-width: 860px; margin: 0 auto; }
+    header { text-align: center; margin-bottom: 3rem; }
+    h1 { font-size: 2rem; margin-bottom: 0.4rem; }
+    .subtitle { color: #555; font-size: 1.05rem; }
+    .subtitle a { color: #0969da; text-decoration: none; }
+    .subtitle a:hover { text-decoration: underline; }
+    h2 { font-size: 1.4rem; margin: 2.5rem 0 1rem; border-bottom: 1px solid #e0e0e0; padding-bottom: 0.4rem; }
+    /* Tabs */
+    .tabs { display: flex; flex-wrap: wrap; gap: 0; border-bottom: 2px solid #e0e0e0; margin-bottom: 0; }
+    .tab { padding: 0.5rem 1.2rem; cursor: pointer; font-size: 0.9rem; font-weight: 500;
+           border: 1px solid transparent; border-bottom: none; border-radius: 4px 4px 0 0;
+           background: none; color: #555; position: relative; bottom: -2px; }
+    .tab.active { background: #fff; border-color: #e0e0e0; color: #0969da; border-bottom: 2px solid #fff; }
+    .tab:hover { color: #0969da; }
+    .tab-content { display: none; border: 1px solid #e0e0e0; border-top: none;
+                   border-radius: 0 0 6px 6px; padding: 1.2rem 1.4rem; background: #f8f9fa; }
+    .tab-content.active { display: block; }
+    .tab-content pre { background: #fff; border: 1px solid #e0e0e0; border-radius: 4px;
+                       padding: 0.8rem 1rem; font-family: 'SF Mono', Menlo, monospace;
+                       font-size: 0.85rem; overflow-x: auto; margin: 0.6rem 0;
+                       white-space: pre-wrap; word-wrap: break-word; line-height: 1.5; }
+    .tab-content pre .user { color: #0969da; font-weight: 600; }
+    .tab-content pre .ai { color: #1a7f37; font-weight: 600; }
+    .tab-content p { font-size: 0.9rem; margin: 0.4rem 0; color: #444; }
+    /* Skills cards */
+    .cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 1rem; }
+    .card { border: 1px solid #e0e0e0; border-radius: 6px; padding: 1rem 1.2rem; }
+    .card h3 { font-size: 0.95rem; margin-bottom: 0.3rem; font-family: 'SF Mono', Menlo, monospace; }
+    .card p { font-size: 0.85rem; color: #555; }
+    footer { margin-top: 3rem; padding-top: 1.5rem; border-top: 1px solid #e0e0e0;
+             text-align: center; color: #666; font-size: 0.85rem; }
+    footer a { color: #0969da; text-decoration: none; }
+    footer a:hover { text-decoration: underline; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <h1>OSADO AI Assistant</h1>
+      <p class="subtitle">AI-powered developer skills for
+        <a href="https://github.com/os-autoinst/os-autoinst-distri-opensuse">os-autoinst-distri-opensuse</a></p>
+    </header>
+
+    <h2>Use Cases</h2>
+
+    <div class="tabs">
+      <div class="tab active" onclick="switchTab('uc-vr', 'usecases')">Verification planning</div>
+      <div class="tab" onclick="switchTab('uc-log', 'usecases')">Log analysis</div>
+      <div class="tab" onclick="switchTab('uc-lint', 'usecases')">Local checks</div>
+      <div class="tab" onclick="switchTab('uc-catalog', 'usecases')">Documentation</div>
+      <div class="tab" onclick="switchTab('uc-unit', 'usecases')">Unit tests</div>
+      <div class="tab" onclick="switchTab('uc-pr', 'usecases')">PR creation</div>
+    </div>
+
+    <div class="tab-content active" id="uc-vr" data-group="usecases">
+      <pre><span class="user">You:</span> I changed lib/sles4sap/azure_cli.pm -- what do I need to test?
+
+<span class="ai">AI:</span>  Your change touches 1 library file. Here's the verification plan:
+     - Unit test: prove -l -Ios-autoinst/ t/sles4sap/azure_cli.t
+     - Affected tests: tests/sles4sap/hana_install.pm, tests/sles4sap/azure_deploy.pm
+     - Schedules: schedule/sles4sap/hana_node.yaml
+     To get a clonable openQA job, confirm the target instance (osd or o3).</pre>
+    </div>
+
+    <div class="tab-content" id="uc-log" data-group="usecases">
+      <pre><span class="user">You:</span> I have the autoinst-log.txt from a failed job. The hana_install module
+     timed out -- was it a real failure or infrastructure lag?
+
+<span class="ai">AI:</span>  Running health check on autoinst-log.txt... 1 timeout detected in hana_install.
+     Running lag detection... backend loop count: 243,891 (threshold: 100,000).
+     Verdict: infrastructure stress on the worker host. The SUT likely had no issue.
+     Recommend: re-run the job on a different worker.</pre>
+    </div>
+
+    <div class="tab-content" id="uc-lint" data-group="usecases">
+      <pre><span class="user">You:</span> I edited lib/sles4sap/azure_cli.pm and schedule/sles4sap/hana_node.yaml
+     -- what should I run locally?
+
+<span class="ai">AI:</span>  Analysing 2 changed files...
+
+     TIER 1 (instant):
+       perl -c lib/sles4sap/azure_cli.pm ... PASS
+       yamllint schedule/sles4sap/hana_node.yaml ... PASS
+
+     TIER 2 (before commit):
+       prove -lv -Ios-autoinst/ t/sles4sap/azure_cli.t ... 12 tests passed
+       make tidy ... no changes needed
+
+     All local checks passed. Ready to push.</pre>
+    </div>
+
+    <div class="tab-content" id="uc-catalog" data-group="usecases">
+      <pre><span class="user">You:</span> Add a documentation header to tests/sles4sap/qesap_ansible.pm
+
+<span class="ai">AI:</span>  Reading file... identified 3 openQA variables (ANSIBLE_PLAYBOOK, PUBLIC_CLOUD_PROVIDER,
+     QESAP_DEPLOYMENT_DIR) and 2 library dependencies (lib/sles4sap/qesapdeployment.pm,
+     lib/publiccloud/utils.pm).
+     Header generated from template. Running audit... PASS.
+     Metadata check... OK. POD whitespace... OK.</pre>
+    </div>
+
+    <div class="tab-content" id="uc-unit" data-group="usecases">
+      <pre><span class="user">You:</span> I added a new function az_disk_create to lib/sles4sap/azure_cli.pm.
+     Generate a unit test for it.
+
+<span class="ai">AI:</span>  Scanning az_disk_create... 3 mandatory args (resource_group, name, size_gb),
+     1 optional (sku). Generating test skeleton with @calls capture pattern,
+     dies_ok for mandatory args, and separate subtest for the optional arg.
+     Written to t/21_sles4sap_azure_cli.t (appended 3 new subtests).
+     Run: prove -lv -Ios-autoinst/ t/21_sles4sap_azure_cli.t</pre>
+    </div>
+
+    <div class="tab-content" id="uc-pr" data-group="usecases">
+      <pre><span class="user">You:</span> Create a PR for my staged changes.
+
+<span class="ai">AI:</span>  Inspecting staged changes... 2 files modified.
+     Proposed commit message:
+       "Add retry logic to azure_cli resource group creation"
+     Written to commit_message.txt -- please review and confirm.
+
+<span class="user">You:</span> Looks good, go ahead.
+
+<span class="ai">AI:</span>  Committed. Pushing to origin/add-retry-azure-cli...
+     Creating PR against os-autoinst/os-autoinst-distri-opensuse...
+     PR #18742 created: https://github.com/os-autoinst/.../pull/18742</pre>
+    </div>
+
+    <h2>Installation</h2>
+
+    <div class="tabs">
+      <div class="tab active" onclick="switchTab('install-gemini', 'install')">Gemini CLI</div>
+      <div class="tab" onclick="switchTab('install-claude', 'install')">Claude Code</div>
+      <div class="tab" onclick="switchTab('install-opencode', 'install')">OpenCode</div>
+    </div>
+
+    <div class="tab-content active" id="install-gemini" data-group="install">
+      <p><strong>Install</strong> as a native Gemini CLI extension:</p>
+      <pre>gemini extensions install https://github.com/mpagot/os-autoinst-distri-opensuse-gemini</pre>
+      <p><strong>Update:</strong></p>
+      <pre>gemini extensions update osado-ai-assistant</pre>
+      <p><strong>Uninstall:</strong></p>
+      <pre>gemini extensions uninstall osado-ai-assistant</pre>
+    </div>
+
+    <div class="tab-content" id="install-claude" data-group="install">
+      <p><strong>Subscribe</strong> to the marketplace (one-time):</p>
+      <pre>claude plugin marketplace add mpagot/os-autoinst-distri-opensuse-gemini</pre>
+      <p>Then in a Claude Code session:</p>
+      <pre>/plugin install osado-ai-assistant@openqa-tools</pre>
+      <p>For full OSADO guidelines in every interaction, add to your project's <code>CLAUDE.md</code>:</p>
+      <pre>@OSADO_AGENTS.md</pre>
+    </div>
+
+    <div class="tab-content" id="install-opencode" data-group="install">
+      <p><strong>Install</strong> (clone and run):</p>
+      <pre>git clone https://github.com/mpagot/os-autoinst-distri-opensuse-gemini
+cd os-autoinst-distri-opensuse-gemini
+./tools/install.sh opencode install</pre>
+      <p><strong>Update:</strong></p>
+      <pre>./tools/install.sh opencode update</pre>
+      <p><strong>Uninstall:</strong></p>
+      <pre>./tools/install.sh opencode uninstall</pre>
+    </div>
+
+    <h2>Skills</h2>
+
+    <div class="cards">
+      <div class="card">
+        <h3>vr-planner</h3>
+        <p>Plans verification runs: unit tests, affected modules, YAML schedules, and openqa-clone-job commands.</p>
+      </div>
+      <div class="card">
+        <h3>openqa-log-analyzer</h3>
+        <p>Triage openQA failures, measure command timing, detect infrastructure lag, compare runs.</p>
+      </div>
+      <div class="card">
+        <h3>local-lint-test</h3>
+        <p>Recommends the fastest local commands to validate edited OSADO code before pushing.</p>
+      </div>
+      <div class="card">
+        <h3>test-catalog</h3>
+        <p>Add or audit Perldoc documentation headers following the test catalog standard.</p>
+      </div>
+      <div class="card">
+        <h3>unit-test-wizard</h3>
+        <p>Writes and reviews OSADO Perl unit tests for library modules in lib/.</p>
+      </div>
+      <div class="card">
+        <h3>git-commit</h3>
+        <p>Writes OSADO-compliant git commit messages for staged changes.</p>
+      </div>
+      <div class="card">
+        <h3>github-pr-create</h3>
+        <p>Creates a GitHub pull request handling commit, push, and PR creation in one step.</p>
+      </div>
+    </div>
+
+    <footer>
+      <p><a href="https://github.com/mpagot/os-autoinst-distri-opensuse-gemini">Source on GitHub</a>
+      &middot; GPL-2.0-or-later
+      &middot; Supports <a href="https://opencode.ai">OpenCode</a>,
+      <a href="https://blog.google/technology/google-deepmind/gemini-cli-open-source/">Gemini CLI</a>,
+      <a href="https://docs.anthropic.com/en/docs/agents-and-tools/claude-code/overview">Claude Code</a></p>
+    </footer>
+  </div>
+
+  <script>
+    function switchTab(id, group) {
+      var parent = document.getElementById(id).parentNode;
+      parent.querySelectorAll('.tab-content[data-group="' + group + '"]').forEach(function(c) { c.classList.remove('active'); });
+      event.currentTarget.parentNode.querySelectorAll('.tab').forEach(function(t) { t.classList.remove('active'); });
+      event.currentTarget.classList.add('active');
+      document.getElementById(id).classList.add('active');
+    }
+  </script>
+</body>
+</html>

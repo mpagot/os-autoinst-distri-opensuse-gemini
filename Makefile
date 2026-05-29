@@ -23,10 +23,10 @@ help:
 	@echo ""
 	@echo "Container runtime (default: podman):"
 	@echo "  make test-integration CONTAINER_RT=docker"
+	@echo "  make test-integration IMAGE_REPO=myregistry/myimage IMAGE_TAG=v2"
 
 # Container runtime (podman or docker)
 CONTAINER_RT ?= podman
-TEST_IMAGE ?= ghcr.io/mpagot/osado-gemini-tester:latest
 
 # Run all local tests (no container needed)
 test: test-install lint gemini-check claude-plugincheck skillcheck
@@ -37,11 +37,23 @@ test-install:
 	./t/test_install.sh
 
 # Integration tests (requires container runtime)
+# The test script owns image defaults (ghcr.io/mpagot/osado-gemini-tester:latest).
+# Override via: make test-integration IMAGE_REPO=myrepo IMAGE_TAG=mytag
 test-integration:
 	@echo "=== Running integration tests ==="
+	@IMAGE_REPO=$${IMAGE_REPO:-ghcr.io/mpagot/osado-gemini-tester}; \
+	IMAGE_TAG=$${IMAGE_TAG:-latest}; \
+	FULL_IMAGE="$$IMAGE_REPO:$$IMAGE_TAG"; \
+	echo "--- Pulling $$FULL_IMAGE ---"; \
+	$(CONTAINER_RT) pull "$$FULL_IMAGE"; \
+	LOCAL_DIGEST=$$($(CONTAINER_RT) image inspect "$$FULL_IMAGE" --format '{{index .RepoDigests 0}}' 2>/dev/null | grep -oP 'sha256:[0-9a-f]+'); \
+	echo "  Local digest: $$LOCAL_DIGEST"; \
 	$(CONTAINER_RT) run --rm \
 		-v "$$(pwd):/src:ro" \
-		$(TEST_IMAGE) \
+		-e "LOCAL_IMAGE_DIGEST=$$LOCAL_DIGEST" \
+		-e "IMAGE_REPO=$$IMAGE_REPO" \
+		-e "IMAGE_TAG=$$IMAGE_TAG" \
+		"$$FULL_IMAGE" \
 		/src/t/test_integration.sh
 
 # Lint all bash scripts with shellcheck

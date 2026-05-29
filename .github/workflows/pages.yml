@@ -1,0 +1,70 @@
+name: GitHub Pages (Docs + OCX Registry)
+
+# Builds project documentation at / and the OCX registry at /ocx/.
+# End users install skills via:
+#   ocx registry add https://mpagot.github.io/os-autoinst-distri-opensuse-gemini/ocx --name osado
+#   ocx add osado/local-lint-test
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'skills/**'
+      - 'ocx/**'
+      - 'docs/**'
+      - 'README.md'
+      - '.github/workflows/pages.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# Allow only one concurrent deployment
+concurrency:
+  group: "pages"
+  cancel-in-progress: false
+
+jobs:
+  build:
+    name: Build Pages Site
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      # --- OCX Registry (deployed to /ocx/) ---
+      - name: Install OCX standalone binary
+        run: |
+          curl -fsSL https://ocx.kdco.dev/install.sh | sh
+          echo "$HOME/.ocx/bin" >> "$GITHUB_PATH"
+
+      - name: Build OCX registry
+        run: |
+          ocx build ./ocx --out _site/ocx
+          echo "::group::OCX registry contents"
+          find _site/ocx -type f | sort
+          echo "::endgroup::"
+
+      # --- Documentation (deployed to /) ---
+      - name: Build documentation landing page
+        run: |
+          cp docs/pages/index.html _site/index.html 2>/dev/null \
+            || echo '<meta http-equiv="refresh" content="0;url=https://github.com/mpagot/os-autoinst-distri-opensuse-gemini">' > _site/index.html
+
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: _site
+
+  deploy:
+    name: Deploy to GitHub Pages
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4

@@ -118,7 +118,7 @@ For a complete list of use cases and detailed explanations, see
 
 ## Installation
 
-### Option A: Gemini CLI Extension (Recommended)
+### Option A: Gemini CLI Extension (Recommended for Gemini Users)
 
 Install as a native Gemini CLI extension. Skills, commands, and context are
 discovered automatically.
@@ -169,62 +169,84 @@ add this to your project's `CLAUDE.md`:
 @OSADO_AGENTS.md
 ```
 
-### Option C: Manual Overlay (Legacy)
+### Option C: OpenCode
 
-Symlinks skills and commands into your OSADO clone's `.gemini/` directory.
-This method is deprecated in favor of the native extension install above.
+#### Quick Install (one command)
 
 ```bash
-# Clone this repository
+# Clone this repo and run the installer
 git clone https://github.com/mpagot/os-autoinst-distri-opensuse-gemini
 cd os-autoinst-distri-opensuse-gemini
-
-# Install (symlinks into your OSADO clone)
-./tools/install.sh /path/to/your/os-autoinst-distri-opensuse
-
-# Update (git pull + refresh symlinks)
-./tools/install.sh --update /path/to/your/os-autoinst-distri-opensuse
-
-# Uninstall (removes only our symlinks, preserves your files)
-./tools/install.sh --uninstall /path/to/your/os-autoinst-distri-opensuse
+./tools/install.sh opencode install
 ```
 
-For cross-tool compatibility (also links into `.agents/skills/` and `AGENTS.md`):
+This installs skills globally to `~/.config/opencode/skills/osado-skills/`.
+OpenCode auto-discovers all skills on your next session.
+
+#### Update
 
 ```bash
-./tools/install.sh --portable /path/to/your/os-autoinst-distri-opensuse
+./tools/install.sh opencode update
+```
+
+#### Check for Updates
+
+```bash
+./tools/install.sh opencode status
+```
+
+#### Uninstall
+
+```bash
+./tools/install.sh opencode uninstall
+```
+
+#### Alternative: OCX (Extension Manager)
+
+If you use [OCX](https://github.com/kdcokenny/ocx), you can install
+individual skills from our registry:
+
+```bash
+# Install OCX (standalone binary, no Node/Bun needed)
+curl -fsSL https://ocx.kdco.dev/install.sh | sh
+
+# One-time: add the OSADO registry
+ocx registry add https://mpagot.github.io/os-autoinst-distri-opensuse-gemini/ocx --name osado
+
+# Install a specific skill
+ocx add osado/local-lint-test
+
+# Update
+ocx update osado/local-lint-test
 ```
 
 ### Option D: Other AI Coding Tools
 
-The skills in this repository follow the
-[Agent Skills open standard](https://agentskills.io) (`SKILL.md` format) and
-are compatible with 36+ AI coding tools.
-
-#### OpenCode / Pi Agent
-
-These tools discover skills in `.agents/skills/`. Copy or symlink the skills
-directory into your OSADO clone:
+The install script supports multiple harnesses. Each targets the correct
+directory for the specified tool:
 
 ```bash
-# From your OSADO clone root:
-mkdir -p .agents/skills
-cp -r /path/to/os-autoinst-distri-opensuse-gemini/skills/* .agents/skills/
+# First clone this repo, then:
+cd os-autoinst-distri-opensuse-gemini
 
-# Also place the AGENTS.md context file at your repo root:
-cp /path/to/os-autoinst-distri-opensuse-gemini/OSADO_AGENTS.md ./AGENTS.md
+# Gemini CLI (symlinks into <osado-path>/.gemini/)
+./tools/install.sh gemini install /path/to/os-autoinst-distri-opensuse
+
+# Claude Code (symlinks into <osado-path>/.claude/skills/)
+./tools/install.sh claude install /path/to/os-autoinst-distri-opensuse
+
+# Cross-tool standard (symlinks into <osado-path>/.agents/skills/)
+./tools/install.sh agents install /path/to/os-autoinst-distri-opensuse
+
+# All harnesses at once (OpenCode global + symlinks at target path)
+./tools/install.sh all install /path/to/os-autoinst-distri-opensuse
 ```
 
-Or use the manual installer with `--portable` (creates these symlinks for you).
-
-#### Claude Code
-
-Claude Code discovers skills in `.claude/skills/`:
+Update any harness:
 
 ```bash
-# From your OSADO clone root:
-mkdir -p .claude/skills
-cp -r /path/to/os-autoinst-distri-opensuse-gemini/skills/* .claude/skills/
+./tools/install.sh gemini update /path/to/os-autoinst-distri-opensuse
+./tools/install.sh all status /path/to/os-autoinst-distri-opensuse
 ```
 
 #### GitHub Copilot
@@ -244,6 +266,9 @@ cp /path/to/os-autoinst-distri-opensuse-gemini/OSADO_AGENTS.md ./AGENTS.md
 ├── .claude-plugin/          # Plugin manifest (for native Claude Code install)
 │   ├── plugin.json
 │   └── marketplace.json
+├── ocx/                     # OCX registry (for OCX extension manager)
+│   ├── registry.jsonc       #   Source manifest (v2 schema)
+│   └── files/skills -> ../../skills  #   Symlink for ocx build
 ├── OSADO_AGENTS.md          # Agent guidelines deployed to OSADO (context + workflow)
 ├── skills/                  # Agent skills (SKILL.md + scripts)
 │   ├── local-lint-test/
@@ -258,9 +283,10 @@ cp /path/to/os-autoinst-distri-opensuse-gemini/OSADO_AGENTS.md ./AGENTS.md
 │       ├── git_commit.toml
 │       └── github_pr_create.toml
 ├── tools/
-│   └── install.sh           # Legacy manual installer
+│   └── install.sh           # Multi-harness installer (opencode/gemini/claude/agents)
 ├── t/                       # Test suite
 ├── docs/                    # Project documentation
+│   └── pages/index.html     #   GitHub Pages landing page
 └── ideas/                   # Research and working artifacts
 ```
 
@@ -275,12 +301,20 @@ cd os-autoinst-distri-opensuse-gemini
 gemini extensions link .
 ```
 
+For OpenCode skill testing within this repo, create a local symlink:
+
+```bash
+mkdir -p .opencode && ln -s ../skills .opencode/skills
+```
+
 Changes to skills, commands, and context files are picked up on the next
 Gemini CLI session.
 
 ### References
 
 - [Agent Skills specification](https://agentskills.io/specification)
+- [OpenCode Skills docs](https://opencode.ai/docs/skills/)
+- [OCX Extension Manager](https://github.com/kdcokenny/ocx)
 - [Gemini CLI Skills](https://geminicli.com/docs/cli/skills/)
 - [Gemini CLI Custom Commands](https://geminicli.com/docs/cli/custom-commands/)
 - [Gemini CLI Extensions](https://geminicli.com/docs/extensions/)
@@ -297,7 +331,25 @@ make test-integration
 
 # Or with docker instead of podman
 make test-integration CONTAINER_RT=docker
+
+# Use a custom container image
+IMAGE_REPO=my-registry.io/my-tester IMAGE_TAG=v2 make test-integration
 ```
+
+Integration tests run inside `ghcr.io/mpagot/osado-gemini-tester:latest` which
+ships with `gemini`, `claude`, and `opencode` pre-installed. The Makefile
+automatically pulls the latest image and verifies the digest against the remote
+registry before running.
+
+To run the integration test script directly (bypassing the pull + digest check):
+
+```bash
+podman run --rm -v "$(pwd):/src:ro" \
+  ghcr.io/mpagot/osado-gemini-tester:latest /src/t/test_integration.sh
+```
+
+Both `IMAGE_REPO` and `IMAGE_TAG` can be overridden via environment variables
+(the test script uses sensible defaults if unset).
 
 ## License
 

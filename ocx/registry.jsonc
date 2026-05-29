@@ -1,0 +1,90 @@
+{
+  "$schema": "https://ocx.kdco.dev/schemas/v2/registry.json",
+  "name": "OSADO Skills",
+  "version": "0.6.0",
+  "author": "Michele Pagot",
+  "opencode": "1.0.0",
+  "ocx": "1.0.16",
+  "components": [
+    {
+      "name": "git-commit",
+      "type": "skill",
+      "description": "Helps write OSADO-compliant git commit messages for staged changes",
+      "files": [
+        "skills/git-commit/SKILL.md"
+      ]
+    },
+    {
+      "name": "github-pr-create",
+      "type": "skill",
+      "description": "Creates a GitHub pull request from staged git changes, handling commit, push, and PR creation in one workflow",
+      "files": [
+        "skills/github-pr-create/SKILL.md"
+      ]
+    },
+    {
+      "name": "local-lint-test",
+      "type": "skill",
+      "description": "Recommends the fastest local commands to validate edited OSADO code before pushing",
+      "files": [
+        "skills/local-lint-test/SKILL.md",
+        "skills/local-lint-test/scripts/recommend_checks.pl",
+        "skills/local-lint-test/scripts/test_compile.sh",
+        "skills/local-lint-test/references/check_reference.md"
+      ]
+    },
+    {
+      "name": "openqa-log-analyzer",
+      "type": "skill",
+      "description": "Specialized skill for analyzing openQA logs: triage failures, measure command timing, detect infrastructure lag, extract command output, and compare runs",
+      "files": [
+        "skills/openqa-log-analyzer/SKILL.md",
+        "skills/openqa-log-analyzer/scripts/analyze_log_health.pl",
+        "skills/openqa-log-analyzer/scripts/compare_modules_time.pl",
+        "skills/openqa-log-analyzer/scripts/detect_lag.pl",
+        "skills/openqa-log-analyzer/scripts/extract_cmd_output.pl",
+        "skills/openqa-log-analyzer/scripts/extract_log_section.pl",
+        "skills/openqa-log-analyzer/scripts/measure_cmd_time.pl",
+        "skills/openqa-log-analyzer/scripts/README.md"
+      ]
+    },
+    {
+      "name": "test-catalog",
+      "type": "skill",
+      "description": "Add or audit a Perldoc documentation header on an OSADO test module following the test catalog standard",
+      "files": [
+        "skills/test-catalog/SKILL.md",
+        "skills/test-catalog/scripts/audit.sh",
+        "skills/test-catalog/scripts/maintainer-detect.sh",
+        "skills/test-catalog/scripts/maintainers.map",
+        "skills/test-catalog/assets/template.md"
+      ]
+    },
+    {
+      "name": "unit-test-wizard",
+      "type": "skill",
+      "description": "Writes and reviews OSADO Perl unit tests for library modules in lib/",
+      "files": [
+        "skills/unit-test-wizard/SKILL.md",
+        "skills/unit-test-wizard/scripts/review_test.pl",
+        "skills/unit-test-wizard/scripts/scaffold_test.pl",
+        "skills/unit-test-wizard/references/ut_rules.md"
+      ]
+    },
+    {
+      "name": "vr-planner",
+      "type": "skill",
+      "description": "Plans how to verify changes to an OSADO checkout: determines unit tests, affected test modules, YAML schedules, and openqa-clone-job commands",
+      "files": [
+        "skills/vr-planner/SKILL.md",
+        "skills/vr-planner/scripts/classify_changes.pl",
+        "skills/vr-planner/scripts/find_affected_tests.pl",
+        "skills/vr-planner/scripts/find_data_consumers.pl",
+        "skills/vr-planner/scripts/find_openqa_job.pl",
+        "skills/vr-planner/scripts/find_test_schedule.pl",
+        "skills/vr-planner/scripts/find_unit_test.pl",
+        "skills/vr-planner/README.md"
+      ]
+    }
+  ]
+}
