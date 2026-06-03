@@ -140,7 +140,8 @@
     <div class="tabs">
       <div class="tab active" onclick="switchTab('install-gemini', 'install')">Gemini CLI</div>
       <div class="tab" onclick="switchTab('install-claude', 'install')">Claude Code</div>
-      <div class="tab" onclick="switchTab('install-opencode', 'install')">OpenCode</div>
+      <div class="tab" onclick="switchTab('install-opencode', 'install')">OpenCode (OCX)</div>
+      <div class="tab" onclick="switchTab('install-script', 'install')">Install Script</div>
     </div>
 
     <div class="tab-content active" id="install-gemini" data-group="install">
@@ -162,14 +163,21 @@
     </div>
 
     <div class="tab-content" id="install-opencode" data-group="install">
-      <p><strong>Install</strong> (clone and run):</p>
+      <p><strong>OCX Registry (Recommended)</strong></p>
+      <p>Add our registry and install specific skills dynamically:</p>
+      <pre>ocx registry add https://mpagot.github.io/os-autoinst-distri-opensuse-gemini/ocx --name osado
+ocx add osado/local-lint-test</pre>
+    </div>
+
+    <div class="tab-content" id="install-script" data-group="install">
+      <p><strong>Global Install Script (Fallback)</strong></p>
+      <p>Clone the repository and install skills globally:</p>
       <pre>git clone https://github.com/mpagot/os-autoinst-distri-opensuse-gemini
 cd os-autoinst-distri-opensuse-gemini
 ./tools/install.sh opencode install</pre>
-      <p><strong>Update:</strong></p>
-      <pre>./tools/install.sh opencode update</pre>
-      <p><strong>Uninstall:</strong></p>
-      <pre>./tools/install.sh opencode uninstall</pre>
+      <p><strong>Update / Uninstall:</strong></p>
+      <pre>./tools/install.sh opencode update
+./tools/install.sh opencode uninstall</pre>
     </div>
 
     <h2>Skills</h2>

@@ -102,193 +102,23 @@ For a complete list of use cases and detailed explanations, see
 | Skill | Description |
 |-------|-------------|
 | `local-lint-test` | Answers: *"What's the fastest local command to validate my edit right now?"* |
-| `vr-planner` | Answers: *"What remote openQA jobs should I clone to verify my change?"* |
+| `unit-test-wizard` | Write and review unit tests for OSADO Perl library modules |
 | `test-catalog` | Add/audit Perldoc documentation headers on test modules |
-| `openqa-log-analyzer` | Parse and extract sections from `autoinst-log.txt` |
+| `vr-planner` | Answers: *"What remote openQA jobs should I clone to verify my change?"* |
 | `git-commit` | Write OSADO-compliant commit messages for staged changes |
 | `github-pr-create` | End-to-end workflow: commit, push, and create PR upstream |
-| `unit-test-wizard` | Write and review unit tests for OSADO Perl library modules |
+| `openqa-log-analyzer` | Parse and extract sections from `autoinst-log.txt` |
 
 ## Dependencies
 
 - `gh` (GitHub CLI) for PR operations.
 - `jq` for JSON processing.
-- `fzf` (optional, for interactive comment search).
 - `perl` for compilation checks.
 
 ## Installation
 
-### Option A: Gemini CLI Extension (Recommended for Gemini Users)
+See the [installation](INSTALL.md) document.
 
-Install as a native Gemini CLI extension. Skills, commands, and context are
-discovered automatically.
-
-```bash
-# User-level (available across all projects)
-gemini extensions install https://github.com/mpagot/os-autoinst-distri-opensuse-gemini
-```
-
-**Workspace-level is recommended** since the context and skills are
-OSADO-specific.
-
-#### Update
-
-```bash
-gemini extensions update osado-ai-assistant
-```
-
-#### Uninstall
-
-```bash
-gemini extensions uninstall osado-ai-assistant
-```
-
-### Option B: Claude Code Plugin
-
-Install as a native Claude Code plugin via the marketplace system.
-
-```bash
-# Subscribe to the marketplace (one-time)
-claude plugin marketplace add mpagot/os-autoinst-distri-opensuse-gemini
-```
-
-Then in a Claude Code session:
-
-```
-/plugin install osado-ai-assistant@openqa-tools
-```
-
-Skills become available as `osado-ai-assistant:local-lint-test`,
-`osado-ai-assistant:vr-planner`, etc.
-
-**Note:** Claude Code plugins don't inject per-turn project context like
-Gemini CLI extensions do. For full OSADO guidelines in every interaction,
-add this to your project's `CLAUDE.md`:
-
-```markdown
-@OSADO_AGENTS.md
-```
-
-### Option C: OpenCode
-
-#### Quick Install (one command)
-
-```bash
-# Clone this repo and run the installer
-git clone https://github.com/mpagot/os-autoinst-distri-opensuse-gemini
-cd os-autoinst-distri-opensuse-gemini
-./tools/install.sh opencode install
-```
-
-This installs skills globally to `~/.config/opencode/skills/osado-skills/`.
-OpenCode auto-discovers all skills on your next session.
-
-#### Update
-
-```bash
-./tools/install.sh opencode update
-```
-
-#### Check for Updates
-
-```bash
-./tools/install.sh opencode status
-```
-
-#### Uninstall
-
-```bash
-./tools/install.sh opencode uninstall
-```
-
-#### Alternative: OCX (Extension Manager)
-
-If you use [OCX](https://github.com/kdcokenny/ocx), you can install
-individual skills from our registry:
-
-```bash
-# Install OCX (standalone binary, no Node/Bun needed)
-curl -fsSL https://ocx.kdco.dev/install.sh | sh
-
-# One-time: add the OSADO registry
-ocx registry add https://mpagot.github.io/os-autoinst-distri-opensuse-gemini/ocx --name osado
-
-# Install a specific skill
-ocx add osado/local-lint-test
-
-# Update
-ocx update osado/local-lint-test
-```
-
-### Option D: Other AI Coding Tools
-
-The install script supports multiple harnesses. Each targets the correct
-directory for the specified tool:
-
-```bash
-# First clone this repo, then:
-cd os-autoinst-distri-opensuse-gemini
-
-# Gemini CLI (symlinks into <osado-path>/.gemini/)
-./tools/install.sh gemini install /path/to/os-autoinst-distri-opensuse
-
-# Claude Code (symlinks into <osado-path>/.claude/skills/)
-./tools/install.sh claude install /path/to/os-autoinst-distri-opensuse
-
-# Cross-tool standard (symlinks into <osado-path>/.agents/skills/)
-./tools/install.sh agents install /path/to/os-autoinst-distri-opensuse
-
-# All harnesses at once (OpenCode global + symlinks at target path)
-./tools/install.sh all install /path/to/os-autoinst-distri-opensuse
-```
-
-Update any harness:
-
-```bash
-./tools/install.sh gemini update /path/to/os-autoinst-distri-opensuse
-./tools/install.sh all status /path/to/os-autoinst-distri-opensuse
-```
-
-#### GitHub Copilot
-
-Copilot reads `AGENTS.md` at the repository root for project context but does
-not support the skills/scripts mechanism:
-
-```bash
-cp /path/to/os-autoinst-distri-opensuse-gemini/OSADO_AGENTS.md ./AGENTS.md
-```
-
-## Repository Structure
-
-```
-.
-├── gemini-extension.json    # Extension manifest (for native Gemini install)
-├── .claude-plugin/          # Plugin manifest (for native Claude Code install)
-│   ├── plugin.json
-│   └── marketplace.json
-├── ocx/                     # OCX registry (for OCX extension manager)
-│   ├── registry.jsonc       #   Source manifest (v2 schema)
-│   └── files/skills -> ../../skills  #   Symlink for ocx build
-├── OSADO_AGENTS.md          # Agent guidelines deployed to OSADO (context + workflow)
-├── skills/                  # Agent skills (SKILL.md + scripts)
-│   ├── local-lint-test/
-│   ├── vr-planner/
-│   ├── test-catalog/
-│   ├── openqa-log-analyzer/
-│   ├── git-commit/
-│   ├── github-pr-create/
-│   └── unit-test-wizard/
-├── commands/                # Custom commands (Gemini CLI only, TOML)
-│   └── osado/
-│       ├── git_commit.toml
-│       └── github_pr_create.toml
-├── tools/
-│   └── install.sh           # Multi-harness installer (opencode/gemini/claude/agents)
-├── t/                       # Test suite
-├── docs/                    # Project documentation
-│   └── pages/index.html     #   GitHub Pages landing page
-└── ideas/                   # Research and working artifacts
-```
 
 ## Contributing
 
