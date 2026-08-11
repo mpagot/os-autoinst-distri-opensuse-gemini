@@ -182,9 +182,10 @@ if [[ -n "${LOCAL_IMAGE_DIGEST:-}" ]]; then
 
     # Query registry for the remote digest
     # ghcr.io requires a bearer token even for public images.
+    # || echo "" guards against set -e triggering when curl/jq fail on network errors.
     registry_token=$(curl -fsSL \
         "https://$registry_host/token?scope=repository:$registry_path:pull" 2>/dev/null \
-        | jq -r '.token // empty' 2>/dev/null)
+        | jq -r '.token // empty' 2>/dev/null || echo "")
 
     if [[ -n "$registry_token" ]]; then
         remote_digest=$(curl -fsSL \
@@ -192,7 +193,7 @@ if [[ -n "${LOCAL_IMAGE_DIGEST:-}" ]]; then
             -H "Accept: application/vnd.oci.image.index.v1+json, application/vnd.docker.distribution.manifest.list.v2+json, application/vnd.docker.distribution.manifest.v2+json" \
             --head \
             "https://$registry_host/v2/$registry_path/manifests/$IMAGE_TAG" 2>/dev/null \
-            | grep -i "docker-content-digest" | grep -oP 'sha256:[0-9a-f]+')
+            | grep -i "docker-content-digest" | grep -oP 'sha256:[0-9a-f]+' || echo "")
 
         if [[ -n "$remote_digest" ]]; then
             log_info "Remote image digest: $remote_digest"
@@ -218,6 +219,7 @@ log_section "TEST 1: Source Repository Structure"
 
 assert_file_exists "$SRC_DIR/gemini-extension.json" "Extension manifest exists"
 assert_file_exists "$SRC_DIR/OSADO_AGENTS.md" "Context file exists"
+assert_file_exists "$SRC_DIR/plugin.json" "Antigravity plugin manifest exists"
 assert_file_exists "$SRC_DIR/.claude-plugin/plugin.json" "Claude Code plugin manifest exists"
 assert_file_exists "$SRC_DIR/.claude-plugin/marketplace.json" "Claude Code marketplace manifest exists"
 assert_file_exists "$SRC_DIR/ocx/registry.jsonc" "OCX registry manifest exists"
@@ -862,6 +864,93 @@ if [[ "$OCX_INSTALL_OK" == "true" ]]; then
     rm -rf "$OCX_PROJECT"
 else
     log_skip "OCX CLI not available: skipping add workflow tests"
+fi
+
+# =============================================================================
+# TEST 16: Antigravity CLI Compatibility
+# =============================================================================
+log_section "TEST 16: Antigravity CLI Compatibility"
+
+# Validate plugin.json manifest at repo root
+agy_manifest="$SRC_DIR/plugin.json"
+
+assert_file_exists "$agy_manifest" "Antigravity plugin manifest (plugin.json) at repo root"
+
+# Verify only allowed fields (additionalProperties: false in schema)
+extra_fields=$(jq -r '[keys[] | select(. != "name" and . != "description")] | join(", ")' \
+    "$agy_manifest" 2>/dev/null)
+if [[ -z "$extra_fields" ]]; then
+    log_pass "plugin.json has no extra fields (additionalProperties:false satisfied)"
+else
+    log_fail "plugin.json has disallowed fields: $extra_fields"
+fi
+
+# Verify required 'name' field and pattern
+agy_name=$(jq -r '.name // empty' "$agy_manifest" 2>/dev/null)
+if [[ -n "$agy_name" ]]; then
+    log_pass "plugin.json has required 'name' field: $agy_name"
+else
+    log_fail "plugin.json missing required 'name' field"
+fi
+
+if [[ "$agy_name" =~ ^[a-zA-Z0-9_-]+$ ]]; then
+    log_pass "plugin.json name matches ^[a-zA-Z0-9-_]+\$: $agy_name"
+else
+    log_fail "plugin.json name '$agy_name' does not match ^[a-zA-Z0-9-_]+\$"
+fi
+
+# Verify name is in sync with gemini-extension.json
+gemini_name=$(jq -r '.name' "$SRC_DIR/gemini-extension.json" 2>/dev/null)
+if [[ "$agy_name" == "$gemini_name" ]]; then
+    log_pass "plugin.json name in sync with gemini-extension.json: $agy_name"
+else
+    log_fail "name mismatch: plugin.json='$agy_name' vs gemini-extension.json='$gemini_name'"
+fi
+
+# Test install.sh antigravity harness: symlinks into staging dir
+FAKE_HOME_AGY=$(mktemp -d)
+AGY_PLUGIN_DIR="$FAKE_HOME_AGY/.gemini/antigravity-cli/plugins/osado-ai-assistant"
+
+HOME="$FAKE_HOME_AGY" "$SRC_DIR/tools/install.sh" antigravity install >/dev/null 2>&1
+
+assert_symlink "$AGY_PLUGIN_DIR/plugin.json" \
+    "$SRC_DIR/plugin.json" \
+    "antigravity install: plugin.json symlinked"
+
+for skill in "${EXPECTED_SKILLS[@]}"; do
+    assert_symlink "$AGY_PLUGIN_DIR/skills/$skill/SKILL.md" \
+        "$SRC_DIR/skills/$skill/SKILL.md" \
+        "antigravity install: skills/$skill/SKILL.md"
+done
+
+# Test uninstall removes symlinks
+HOME="$FAKE_HOME_AGY" "$SRC_DIR/tools/install.sh" antigravity uninstall >/dev/null 2>&1
+
+if [[ ! -L "$AGY_PLUGIN_DIR/plugin.json" ]]; then
+    log_pass "antigravity uninstall: plugin.json removed"
+else
+    log_fail "antigravity uninstall: plugin.json still exists"
+fi
+
+if [[ ! -L "$AGY_PLUGIN_DIR/skills/local-lint-test/SKILL.md" ]]; then
+    log_pass "antigravity uninstall: skills/ symlinks removed"
+else
+    log_fail "antigravity uninstall: skills/ symlinks still exist"
+fi
+
+rm -rf "$FAKE_HOME_AGY"
+
+# Run agy plugin validate if agy is available in the container
+if has_command agy; then
+    log_info "agy: $(agy --version 2>&1 | head -1)"
+    validate_output=$(agy plugin validate "$SRC_DIR" 2>&1) && validate_rc=0 || validate_rc=$?
+    if [[ $validate_rc -eq 0 ]]; then
+        log_pass "agy plugin validate: $SRC_DIR"
+    else
+        log_fail "agy plugin validate failed (rc=$validate_rc): $validate_output"
+    fi
+else
+    log_skip "agy not on PATH — skipping agy plugin validate"
 fi
 
 # =============================================================================

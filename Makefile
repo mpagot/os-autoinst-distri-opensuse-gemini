@@ -2,7 +2,7 @@
 # OSADO AI Assistant - Development Makefile
 # ==============================================================================
 
-.PHONY: test test-install test-integration lint shellcheck perlcheck semgrep gemini-check claude-plugincheck skillcheck clean help
+.PHONY: test test-install test-integration lint shellcheck perlcheck semgrep gemini-check claude-plugincheck antigravity-check skillcheck clean help
 
 # Default target
 help:
@@ -19,6 +19,7 @@ help:
 	@echo "Harness-specific validation:"
 	@echo "  make gemini-check        - Validate Gemini CLI extension manifest"
 	@echo "  make claude-plugincheck  - Validate Claude Code plugin manifests"
+	@echo "  make antigravity-check   - Validate Antigravity CLI plugin manifest (plugin.json)"
 	@echo "  make skillcheck          - Validate SKILL.md frontmatter (name + description)"
 	@echo ""
 	@echo "Container runtime (default: podman):"
@@ -29,7 +30,7 @@ help:
 CONTAINER_RT ?= podman
 
 # Run all local tests (no container needed)
-test: test-install lint gemini-check claude-plugincheck skillcheck
+test: test-install lint gemini-check claude-plugincheck antigravity-check skillcheck
 
 # Overlay installer unit tests
 test-install:
@@ -120,6 +121,24 @@ claude-plugincheck:
 	   fi; \
 	 done
 	@echo "Claude Code plugin manifests valid and name/version/description in sync."
+
+# Validate Antigravity CLI plugin manifest (schema: only name + description, additionalProperties: false)
+antigravity-check:
+	@echo "=== Validating Antigravity CLI plugin manifest ==="
+	@[ -f plugin.json ] || { echo "ERROR: Missing plugin.json at repo root"; exit 1; }
+	@jq -e '.name // empty' plugin.json >/dev/null || \
+		{ echo "ERROR: plugin.json missing required 'name' field"; exit 1; }
+	@name=$$(jq -r '.name' plugin.json); \
+	 echo "$$name" | grep -qE '^[a-zA-Z0-9_-]+$$' || \
+		{ echo "ERROR: plugin.json name '$$name' invalid (must match ^[a-zA-Z0-9-_]+$$)"; exit 1; }
+	@extra=$$(jq -r '[keys[] | select(. != "name" and . != "description")] | join(", ")' plugin.json); \
+	 [ -z "$$extra" ] || \
+		{ echo "ERROR: plugin.json has properties not allowed by schema (additionalProperties:false): $$extra"; exit 1; }
+	@agy_name=$$(jq -r '.name' plugin.json); \
+	 gemini_name=$$(jq -r '.name' gemini-extension.json); \
+	 [ "$$agy_name" = "$$gemini_name" ] || \
+		{ echo "ERROR: name mismatch: plugin.json='$$agy_name' vs gemini-extension.json='$$gemini_name'"; exit 1; }
+	@echo "plugin.json valid."
 
 # Validate SKILL.md frontmatter (name + description required)
 skillcheck:
