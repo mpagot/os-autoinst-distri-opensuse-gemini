@@ -14,10 +14,16 @@ See `README.md` for installation options and user-facing documentation.
 Run `make help` to list all targets. Key targets:
 
 ```bash
-make test              # installer tests + shellcheck (no container needed)
+make test              # installer tests + shellcheck + all manifest checks (no container needed)
 make test-integration  # integration tests in container
 make clean             # remove test artifacts
 ```
+
+Manifest validation targets (all included in `make test`):
+- `make gemini-check` — validates `gemini-extension.json`
+- `make claude-plugincheck` — validates `.claude-plugin/` manifests and version sync
+- `make antigravity-check` — validates root `plugin.json` (schema + name sync)
+- `make skillcheck` — validates `SKILL.md` frontmatter in all skills
 
 Always run `make test` before committing. Run `make test-integration` when
 modifying skills or the install script.
@@ -61,6 +67,7 @@ Ensure valid YAML frontmatter in all `SKILL.md` files.
 
 ```
 .
+├── plugin.json              # Plugin manifest (for native Antigravity CLI install)
 ├── gemini-extension.json    # Extension manifest (for native Gemini install)
 ├── .claude-plugin/          # Plugin manifest (for native Claude Code install)
 │   ├── plugin.json
@@ -82,7 +89,7 @@ Ensure valid YAML frontmatter in all `SKILL.md` files.
 │       ├── git_commit.toml
 │       └── github_pr_create.toml
 ├── tools/
-│   └── install.sh           # Multi-harness installer (opencode/gemini/claude/agents)
+│   └── install.sh           # Multi-harness installer (opencode/antigravity/gemini/claude/agents)
 ├── t/                       # Test suite
 ├── docs/                    # Project documentation
 │   └── pages/index.html     #   GitHub Pages landing page
@@ -96,7 +103,8 @@ This repository supports multiple installation strategies:
 |--------|----------|-----------|
 | `gemini extensions install` | Gemini CLI users | Native extension |
 | `claude plugin marketplace add` | Claude Code users | Native plugin |
-| `tools/install.sh` | Legacy users | Symlink overlay |
+| `agy plugin install` | Antigravity CLI users | Native plugin |
+| `tools/install.sh` | All users (no native CLI needed) | Symlink overlay |
 | `gemini extensions link .` | Developers of this repo | Local dev testing |
 | Manual copy to `.agents/skills/` | OpenCode/Pi Agent users | File-based |
 | Manual copy to `.claude/skills/` | Claude Code users (alt) | File-based |
@@ -105,6 +113,7 @@ This repository supports multiple installation strategies:
 
 | File | Purpose |
 |------|---------|
+| `plugin.json` | Plugin manifest (Antigravity CLI) |
 | `gemini-extension.json` | Extension manifest (Gemini CLI) |
 | `.claude-plugin/plugin.json` | Plugin manifest (Claude Code) |
 | `.claude-plugin/marketplace.json` | Marketplace manifest (Claude Code) |
@@ -112,7 +121,7 @@ This repository supports multiple installation strategies:
 | `OSADO_AGENTS.md` | Agent guidelines deployed to OSADO repos |
 | `skills/` | Agent skills (`SKILL.md` + `scripts/`) |
 | `commands/` | Custom slash commands (TOML, Gemini CLI only) |
-| `tools/install.sh` | Legacy symlink installer |
+| `tools/install.sh` | Multi-harness symlink installer |
 | `Makefile` | Development build/test/lint targets |
 | `AGENTS.md` | Developer guidelines for THIS repo (this file) |
 

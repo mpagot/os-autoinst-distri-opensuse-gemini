@@ -10,11 +10,12 @@
 #   install.sh <harness> <action> [target_path]
 #
 # HARNESSES:
-#   opencode   Install skills globally for OpenCode (~/.config/opencode/skills/)
-#   gemini     Symlink into <target>/.gemini/ for Gemini CLI
-#   claude     Symlink into <target>/.claude/skills/ for Claude Code
-#   agents     Symlink into <target>/.agents/skills/ (cross-tool standard)
-#   all        Run all harnesses (opencode global + others at target path)
+#   opencode      Install skills globally for OpenCode (~/.config/opencode/skills/)
+#   gemini        Symlink into <target>/.gemini/ for Gemini CLI
+#   claude        Symlink into <target>/.claude/skills/ for Claude Code
+#   agents        Symlink into <target>/.agents/skills/ (cross-tool standard)
+#   antigravity   Symlink into ~/.gemini/antigravity-cli/plugins/osado-ai-assistant/
+#   all           Run all harnesses (global + symlink-based at target path)
 #
 # ACTIONS:
 #   install    Install skills for the specified harness
@@ -26,15 +27,15 @@
 #   install.sh opencode install
 #   install.sh opencode update
 #   install.sh opencode status
+#   install.sh antigravity install
 #   install.sh gemini install /path/to/os-autoinst-distri-opensuse
 #   install.sh all install /path/to/os-autoinst-distri-opensuse
 #
 # NOTES:
-#   - The 'opencode' harness does not require a target path (installs globally).
+#   - 'opencode' and 'antigravity' do not require a target path (global installs).
 #   - All other harnesses require a target path pointing to an OSADO git repo.
 #   - Symlink-based harnesses never overwrite existing regular files.
-#   - The 'opencode' harness uses git clone for installation and git pull for
-#     updates. This hides git details from the user.
+#   - The 'opencode' harness uses git clone; all others use symlinks.
 #
 # ==============================================================================
 
@@ -69,11 +70,12 @@ usage() {
     echo "Usage: $0 <harness> <action> [target_path]"
     echo ""
     echo "Harnesses:"
-    echo "  opencode    OpenCode (global install, no target path needed)"
-    echo "  gemini      Gemini CLI (symlinks into <target>/.gemini/)"
-    echo "  claude      Claude Code (symlinks into <target>/.claude/skills/)"
-    echo "  agents      Cross-tool (symlinks into <target>/.agents/skills/)"
-    echo "  all         All harnesses at once"
+    echo "  opencode      OpenCode (global install, no target path needed)"
+    echo "  gemini        Gemini CLI (symlinks into <target>/.gemini/)"
+    echo "  claude        Claude Code (symlinks into <target>/.claude/skills/)"
+    echo "  agents        Cross-tool (symlinks into <target>/.agents/skills/)"
+    echo "  antigravity   Antigravity CLI (native agy plugin, no target path needed)"
+    echo "  all           All harnesses at once"
     echo ""
     echo "Actions:"
     echo "  install     Install skills"
@@ -104,7 +106,7 @@ TARGET_PATH="${3:-}"
 
 # Validate harness
 case "$HARNESS" in
-    opencode|gemini|claude|agents|all) ;;
+    opencode|gemini|claude|agents|antigravity|all) ;;
     --help|-h|help) usage ;;
     *) log_error "Unknown harness: '$HARNESS'"; usage ;;
 esac
@@ -116,7 +118,7 @@ case "$ACTION" in
 esac
 
 # Validate target path requirement
-if [[ "$HARNESS" != "opencode" && -z "$TARGET_PATH" ]]; then
+if [[ "$HARNESS" != "opencode" && "$HARNESS" != "antigravity" && -z "$TARGET_PATH" ]]; then
     if [[ "$HARNESS" == "all" ]]; then
         log_error "The 'all' harness requires a target path for gemini/claude/agents."
         log_error "Usage: $0 all <action> /path/to/osado-repo"
@@ -245,6 +247,123 @@ opencode_uninstall() {
 
     rm -rf "$OPENCODE_INSTALL_DIR"
     log_success "OSADO skills removed from OpenCode."
+}
+
+# ==============================================================================
+# Antigravity Harness (symlink-based, global install)
+# Stages files into ~/.gemini/antigravity-cli/plugins/<name>/ — the directory
+# Antigravity CLI auto-discovers on startup (no agy CLI required).
+# ==============================================================================
+
+ANTIGRAVITY_INSTALL_DIR="${HOME}/.gemini/antigravity-cli/plugins/osado-ai-assistant"
+
+antigravity_install() {
+    log_info "Installing OSADO skills for Antigravity CLI..."
+    mkdir -p "$ANTIGRAVITY_INSTALL_DIR"
+
+    # Link plugin.json at the plugin root (required manifest)
+    local plugin_src="$REPO_ROOT/plugin.json"
+    local plugin_dst="$ANTIGRAVITY_INSTALL_DIR/plugin.json"
+    if [[ -e "$plugin_dst" ]] || [[ -L "$plugin_dst" ]]; then
+        if [[ -L "$plugin_dst" && "$(readlink "$plugin_dst")" == "$plugin_src" ]]; then
+            : # already correct
+        elif [[ -L "$plugin_dst" ]]; then
+            log_warn "Conflict: '$plugin_dst' symlinked elsewhere. Skipping."
+        else
+            log_warn "Conflict: '$plugin_dst' is a regular file. Skipping."
+        fi
+    else
+        ln -s "$plugin_src" "$plugin_dst"
+        echo "  Linked: plugin.json"
+    fi
+
+    # Recursively link skills/
+    link_files "$REPO_ROOT" "skills" "$ANTIGRAVITY_INSTALL_DIR"
+
+    log_success "Installation complete for antigravity."
+}
+
+antigravity_update() {
+    log_info "Updating toolset repository..."
+    git -C "$REPO_ROOT" pull --quiet
+
+    log_info "Refreshing symlinks for antigravity..."
+    antigravity_install
+}
+
+antigravity_uninstall() {
+    log_info "Uninstalling antigravity from $ANTIGRAVITY_INSTALL_DIR..."
+
+    # Unlink plugin.json if it points to this repo
+    local plugin_dst="$ANTIGRAVITY_INSTALL_DIR/plugin.json"
+    if [[ -L "$plugin_dst" && "$(readlink "$plugin_dst")" == "$REPO_ROOT/plugin.json" ]]; then
+        unlink "$plugin_dst"
+        echo "  Unlinked: plugin.json"
+    fi
+
+    # Unlink skills/
+    unlink_files "$REPO_ROOT" "skills" "$ANTIGRAVITY_INSTALL_DIR"
+
+    log_success "Uninstallation complete for antigravity."
+}
+
+antigravity_status() {
+    echo -e "${BOLD}Harness:${NC}  antigravity"
+    echo -e "${BOLD}Target:${NC}   $ANTIGRAVITY_INSTALL_DIR"
+
+    if [[ ! -d "$ANTIGRAVITY_INSTALL_DIR" ]]; then
+        echo -e "${YELLOW}Not installed.${NC} Run '$0 antigravity install' to set up."
+        return 0
+    fi
+
+    local linked=0
+    local missing=0
+
+    # Check plugin.json
+    local plugin_dst="$ANTIGRAVITY_INSTALL_DIR/plugin.json"
+    if [[ -L "$plugin_dst" && "$(readlink "$plugin_dst")" == "$REPO_ROOT/plugin.json" ]]; then
+        linked=$(( linked + 1 ))
+    else
+        missing=$(( missing + 1 ))
+    fi
+
+    # Check skills/
+    while IFS= read -r -d '' file; do
+        local rel="${file#"$REPO_ROOT"/}"
+        local target_file="$ANTIGRAVITY_INSTALL_DIR/$rel"
+        if [[ -L "$target_file" ]]; then
+            local link_dest
+            link_dest=$(readlink "$target_file")
+            if [[ "$link_dest" == "$file" ]]; then
+                linked=$(( linked + 1 ))
+            fi
+        else
+            missing=$(( missing + 1 ))
+        fi
+    done < <(find "$REPO_ROOT/skills" -type f -print0)
+
+    if [[ "$linked" -eq 0 && "$missing" -gt 0 ]]; then
+        echo -e "${YELLOW}Not installed.${NC} Run '$0 antigravity install'"
+    elif [[ "$missing" -gt 0 ]]; then
+        echo -e "${YELLOW}Partially installed:${NC} $linked linked, $missing missing"
+        log_info "Run '$0 antigravity install' to complete."
+    else
+        log_success "Fully installed ($linked files linked)."
+    fi
+
+    log_info "Checking repo for updates..."
+    git -C "$REPO_ROOT" fetch --quiet 2>/dev/null || {
+        log_warn "Could not reach remote."
+        return 0
+    }
+    local behind
+    behind=$(git -C "$REPO_ROOT" rev-list --count HEAD..origin/main 2>/dev/null || echo "0")
+    if [[ "$behind" -eq 0 ]]; then
+        log_success "Source repo is up to date."
+    else
+        echo -e "${YELLOW}$behind update(s) available in source repo.${NC}"
+        log_info "Run '$0 antigravity update' to apply."
+    fi
 }
 
 # ==============================================================================
@@ -482,6 +601,14 @@ case "$HARNESS" in
             status)    opencode_status ;;
         esac
         ;;
+    antigravity)
+        case "$ACTION" in
+            install)   antigravity_install ;;
+            update)    antigravity_update ;;
+            uninstall) antigravity_uninstall ;;
+            status)    antigravity_status ;;
+        esac
+        ;;
     gemini|claude|agents)
         case "$ACTION" in
             install)   symlink_install "$HARNESS" "$TARGET_ABS_PATH" ;;
@@ -501,6 +628,16 @@ case "$HARNESS" in
             update)    opencode_update ;;
             uninstall) opencode_uninstall ;;
             status)    opencode_status ;;
+        esac
+        echo ""
+
+        # Antigravity (global, no path needed)
+        echo -e "${BOLD}--- antigravity ---${NC}"
+        case "$ACTION" in
+            install)   antigravity_install ;;
+            update)    antigravity_update ;;
+            uninstall) antigravity_uninstall ;;
+            status)    antigravity_status ;;
         esac
         echo ""
 

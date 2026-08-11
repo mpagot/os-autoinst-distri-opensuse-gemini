@@ -458,4 +458,108 @@ log_test "20: Error - invalid action name"
 grep -q "Unknown action" "$TEST_ROOT/err_action.log" || log_fail "Should show unknown action error"
 log_pass
 
+# ------------------------------------------------------------------------------
+# TEST 21: Antigravity Install (Basic)
+# Verifies antigravity harness symlinks plugin.json and skills/ into the
+# global plugin staging directory.
+# ------------------------------------------------------------------------------
+log_test "21: Antigravity Install - plugin.json and skills/ symlinked"
+
+FAKE_HOME_AGY="$TEST_ROOT/fakehome_agy"
+mkdir -p "$FAKE_HOME_AGY"
+AGY_PLUGIN_DIR="$FAKE_HOME_AGY/.gemini/antigravity-cli/plugins/osado-ai-assistant"
+
+HOME="$FAKE_HOME_AGY" "$INSTALL_SCRIPT" antigravity install > /dev/null 2>&1
+
+assert_is_link "$AGY_PLUGIN_DIR/plugin.json" "$REPO_ROOT/plugin.json"
+assert_is_link "$AGY_PLUGIN_DIR/skills/local-lint-test/SKILL.md" \
+    "$REPO_ROOT/skills/local-lint-test/SKILL.md"
+assert_is_link "$AGY_PLUGIN_DIR/skills/openqa-log-analyzer/SKILL.md" \
+    "$REPO_ROOT/skills/openqa-log-analyzer/SKILL.md"
+log_pass
+
+# ------------------------------------------------------------------------------
+# TEST 22: Antigravity Install - Recursive linking (nested directories)
+# Verifies skills with scripts/ subdirs are recursively linked.
+# ------------------------------------------------------------------------------
+log_test "22: Antigravity Install - recursive linking (scripts/ subdir)"
+
+assert_is_link "$AGY_PLUGIN_DIR/skills/openqa-log-analyzer/scripts/extract_log_section.pl" \
+    "$REPO_ROOT/skills/openqa-log-analyzer/scripts/extract_log_section.pl"
+assert_is_link "$AGY_PLUGIN_DIR/skills/test-catalog/scripts/audit.sh" \
+    "$REPO_ROOT/skills/test-catalog/scripts/audit.sh"
+log_pass
+
+# ------------------------------------------------------------------------------
+# TEST 23: Antigravity Install - Conflict protection
+# Verifies that a pre-existing regular file is not overwritten.
+# ------------------------------------------------------------------------------
+log_test "23: Antigravity Install - conflict protection"
+
+FAKE_HOME_AGY2="$TEST_ROOT/fakehome_agy2"
+mkdir -p "$FAKE_HOME_AGY2/.gemini/antigravity-cli/plugins/osado-ai-assistant/skills/local-lint-test"
+echo "USER_CONTENT" > \
+    "$FAKE_HOME_AGY2/.gemini/antigravity-cli/plugins/osado-ai-assistant/skills/local-lint-test/SKILL.md"
+
+HOME="$FAKE_HOME_AGY2" "$INSTALL_SCRIPT" antigravity install > "$TEST_ROOT/agy_conflict.log" 2>&1 || true
+
+grep -q "Conflict" "$TEST_ROOT/agy_conflict.log" || log_fail "No conflict warning found"
+assert_content \
+    "$FAKE_HOME_AGY2/.gemini/antigravity-cli/plugins/osado-ai-assistant/skills/local-lint-test/SKILL.md" \
+    "USER_CONTENT"
+log_pass
+
+# ------------------------------------------------------------------------------
+# TEST 24: Antigravity Uninstall
+# Verifies symlinks are removed and user files are preserved.
+# ------------------------------------------------------------------------------
+log_test "24: Antigravity Uninstall - selective removal"
+
+echo "MY_FILE" > "$AGY_PLUGIN_DIR/skills/my_custom.md"
+
+HOME="$FAKE_HOME_AGY" "$INSTALL_SCRIPT" antigravity uninstall > /dev/null 2>&1
+
+assert_not_exists "$AGY_PLUGIN_DIR/plugin.json"
+assert_not_exists "$AGY_PLUGIN_DIR/skills/local-lint-test/SKILL.md"
+[[ -f "$AGY_PLUGIN_DIR/skills/my_custom.md" ]] || log_fail "User file was deleted during uninstall!"
+log_pass
+
+# ------------------------------------------------------------------------------
+# TEST 25: Antigravity Status - fully installed
+# Verifies status reports installed when all symlinks are in place.
+# ------------------------------------------------------------------------------
+log_test "25: Antigravity Status - fully installed"
+
+HOME="$FAKE_HOME_AGY" "$INSTALL_SCRIPT" antigravity install > /dev/null 2>&1
+HOME="$FAKE_HOME_AGY" "$INSTALL_SCRIPT" antigravity status > "$TEST_ROOT/agy_status.log" 2>&1
+
+grep -qi "Fully installed" "$TEST_ROOT/agy_status.log" || log_fail "Should show fully installed"
+log_pass
+
+# ------------------------------------------------------------------------------
+# TEST 26: Antigravity Status - not installed
+# Verifies status reports not-installed when directory is absent.
+# ------------------------------------------------------------------------------
+log_test "26: Antigravity Status - not installed"
+
+FAKE_HOME_AGY3="$TEST_ROOT/fakehome_agy3"
+mkdir -p "$FAKE_HOME_AGY3"
+
+HOME="$FAKE_HOME_AGY3" "$INSTALL_SCRIPT" antigravity status > "$TEST_ROOT/agy_status_not.log" 2>&1
+grep -qi "Not installed" "$TEST_ROOT/agy_status_not.log" || log_fail "Should show not-installed"
+log_pass
+
+# ------------------------------------------------------------------------------
+# TEST 27: Antigravity - no target path required
+# Verifies antigravity harness does not error when no target path is given.
+# ------------------------------------------------------------------------------
+log_test "27: Antigravity Install - no target path required"
+
+FAKE_HOME_AGY4="$TEST_ROOT/fakehome_agy4"
+mkdir -p "$FAKE_HOME_AGY4"
+HOME="$FAKE_HOME_AGY4" "$INSTALL_SCRIPT" antigravity install > /dev/null 2>&1
+[[ -d "$FAKE_HOME_AGY4/.gemini/antigravity-cli/plugins/osado-ai-assistant" ]] || \
+    log_fail "Plugin dir not created without target path"
+log_pass
+
 echo -e "\n${GREEN}All tests passed successfully!${NC}"

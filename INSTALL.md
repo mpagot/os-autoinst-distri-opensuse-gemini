@@ -177,6 +177,67 @@ And add `@AGENTS.md` to your `CLAUDE.md` file.
 
 ---
 
+## Antigravity CLI
+
+### Native Plugin Installation (Recommended)
+
+Install as a native Antigravity CLI plugin directly from the remote repository:
+
+```bash
+agy plugin install https://github.com/mpagot/os-autoinst-distri-opensuse-gemini.git
+```
+
+Or from a local clone:
+
+```bash
+git clone https://github.com/mpagot/os-autoinst-distri-opensuse-gemini
+agy plugin install /path/to/os-autoinst-distri-opensuse-gemini
+```
+
+Verify the installation:
+
+```bash
+agy plugin list
+```
+
+Update by reinstalling:
+
+```bash
+agy plugin uninstall osado-ai-assistant
+agy plugin install https://github.com/mpagot/os-autoinst-distri-opensuse-gemini.git
+```
+
+### Script Installation
+
+Use the installer script to symlink directly into the Antigravity plugin staging
+directory (`~/.gemini/antigravity-cli/plugins/osado-ai-assistant/`). No `agy` command needed — Antigravity auto-discovers the directory on startup.
+
+```bash
+# Clone this repository (if not already done)
+git clone https://github.com/mpagot/os-autoinst-distri-opensuse-gemini
+cd os-autoinst-distri-opensuse-gemini
+
+# Install (symlinks into ~/.gemini/antigravity-cli/plugins/osado-ai-assistant/)
+./tools/install.sh antigravity install
+```
+
+Update:
+```bash
+./tools/install.sh antigravity update
+```
+
+Check status:
+```bash
+./tools/install.sh antigravity status
+```
+
+Uninstall:
+```bash
+./tools/install.sh antigravity uninstall
+```
+
+---
+
 ## Other AI Coding Tools (Universal Setup)
 
 The skills in this repository follow the [Agent Skills open standard](https://agentskills.io) (`SKILL.md` format) and are compatible with 36+ AI coding tools.

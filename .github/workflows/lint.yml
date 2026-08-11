@@ -20,7 +20,7 @@ jobs:
       - name: Install uv (for semgrep)
         uses: astral-sh/setup-uv@v4
       - name: Run shell lint, semgrep, and manifest/skill validation
-        run: make shellcheck semgrep gemini-check claude-plugincheck skillcheck
+        run: make shellcheck semgrep gemini-check claude-plugincheck antigravity-check skillcheck
 
   perl-lint:
     name: Perl Syntax Check
